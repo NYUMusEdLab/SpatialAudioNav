@@ -23,7 +23,7 @@ class AudioVisualizer3D {
         this.topdownCanvas = document.getElementById('topdown-canvas');
         this.topdownCtx = this.topdownCanvas ? this.topdownCanvas.getContext('2d') : null;
         this.listenerImage = new Image();
-        this.listenerImage.src = 'images/mixing/listener.png';
+        this.listenerImage.src = 'images/listener.png';
         this.listenerImageLoaded = false;
         this.listenerImage.onload = () => {
             this.listenerImageLoaded = true;
@@ -1021,20 +1021,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     }, 500);
-    
-    // Add instructions to the UI
-    setTimeout(() => {
-        const instructions = document.createElement('div');
-        instructions.className = 'visualization-instructions';
-        instructions.textContent = 'Watch piano tiles approach speakers for upcoming activations!';
-        document.body.appendChild(instructions);
-        
-        // Fade instructions out after 10 seconds
-        setTimeout(() => {
-            instructions.style.opacity = '0';
-            setTimeout(() => instructions.remove(), 1000);
-        }, 10000);
-    }, 2000);
 });
 
 // Add a method to the global scope that can be called from the existing audio code

@@ -1,294 +1,25 @@
-import OverviewTimeline from './js/OverviewTimeline.js';
-import KeywordPanel from './js/KeywordPanel.js';
-import SynthesiaDisplay from './js/Synthesia.js';
-
 /**
- * Minimal Spatial Audio Implementation
- * Controls 6 audio sources in a hexagonal arrangement
+ * Simplified Spatial Audio Implementation - Chrome Compatible Version
  */
 
-/*--------------------Web Audio Environment Setup--------------------*/
-// Create audio context and listener
-const AudioContext = window.AudioContext || window.webkitAudioContext;
-const audioCtx = new AudioContext({ latencyHint: 'interactive' });
-const listener = audioCtx.listener;
+// Create variables to hold audio components (initialized on user interaction)
+let audioCtx = null;
+let audioSource = null;
+let gainNodes = [];
+let masterGain = null;
+let panners = [];
+let audioInitialized = false;
 
-// Make them globally accessible for the 3D visualizer
-window.audioCtx = audioCtx;
-window.listener = listener;
+// Set constants for audio positioning
+const posX = 0, posY = 1.7, posZ = 0;
 
-// Configure the audio context for spatial audio
-audioCtx.destination.channelCount = audioCtx.destination.maxChannelCount;
-audioCtx.destination.channelCountMode = "explicit";
-audioCtx.destination.channelInterpretation = "speakers";
-
-// Constants for panner properties
-const innerCone = 30;
-const outerCone = 60;
-const outerGain = 0.3;
-const distanceModel = "inverse";
-const maxDistance = 10;
-const refDistance = 2;
-const rollOff = 2;
-
-// Set initial listener position at center
-const posX = 0;
-const posY = 1.7; // Typical standing ear height in meters
-const posZ = 0;
-listener.positionX.value = posX;
-listener.positionY.value = posY;
-listener.positionZ.value = posZ;
-
-// Default listener orientation (looking forward along negative Z-axis)
-listener.forwardX.value = 0;
-listener.forwardY.value = 0;
-listener.forwardZ.value = -1;
-listener.upX.value = 0;
-listener.upY.value = 1;
-listener.upZ.value = 0;
-
-// Create convolver for reverb effects
-const reverbNode = audioCtx.createConvolver();
-fetch(document.getElementById("ir-response").src)
-    .then(response => response.arrayBuffer())
-    .then(arraybuffer => audioCtx.decodeAudioData(arraybuffer))
-    .then(decodedData => {
-        reverbNode.buffer = decodedData;
-    })
-    .catch(e => console.error("Error loading reverb:", e));
-
-/*--------------------Sound Source Setup--------------------*/
-// Function to get hexagonal positions with specific angles
-function getHexPosition(index, radius) {
-    // Define specific angles for each speaker (in degrees)
-    const speakerAngles = [
-        210, // Speaker 1 (left front)
-        150, // Speaker 2 (right front)
-        90,  // Speaker 3 (right)
-        30,  // Speaker 4 (right back)
-        330, // Speaker 5 (left back)
-        270  // Speaker 6 (left)
-    ];
-    
-    const angle = (speakerAngles[index] * Math.PI) / 180; // Convert to radians
-    return {
-        x: radius * Math.sin(angle),
-        y: posY, // Same height as listener
-        z: radius * Math.cos(angle)
-    };
-}
-
-// Create 6 audio sources in a hexagonal arrangement
-const speakerRadius = 7; // 7 meters from center
-const sources = Array.from({ length: 6 }, (_, i) => getHexPosition(i, speakerRadius));
-
-// Create PannerNodes for spatial positioning
-const panners = sources.map(source => {
-    // Calculate orientation toward the center
-    const dx = posX - source.x;
-    const dy = posY - source.y;
-    const dz = posZ - source.z;
-    const mag = Math.sqrt(dx*dx + dy*dy + dz*dz);
-    
-    return new PannerNode(audioCtx, {
-        panningModel: "HRTF",
-        distanceModel: distanceModel,
-        positionX: source.x,
-        positionY: source.y,
-        positionZ: source.z,
-        orientationX: dx/mag,
-        orientationY: dy/mag,
-        orientationZ: dz/mag,
-        refDistance: refDistance,
-        maxDistance: maxDistance,
-        rolloffFactor: rollOff,
-        coneInnerAngle: innerCone,
-        coneOuterAngle: outerCone,
-        coneOuterGain: outerGain
-    });
-});
-
-// Create GainNodes for volume control and connect to global array
-const gainNodes = panners.map(() => new GainNode(audioCtx, { gain: 0 }));
-window.gainNodes = gainNodes;
-
-// Create master volume control
-const masterGain = new GainNode(audioCtx, { gain: 0.8 });
-
-// Get the audio element
+// Get the audio element first
 const audioElement = document.getElementById("double");
-
-// Connect to the audio context
-const audioSource = audioCtx.createMediaElementSource(audioElement);
-
-// Connect each panner to its gain node and to master output
-panners.forEach((panner, index) => {
-    audioSource.connect(panner);
-    panner.connect(gainNodes[index]);
-    gainNodes[index].connect(masterGain);
-});
-
-// Connect master gain to destination
-masterGain.connect(audioCtx.destination);
-
-// Optional: Add reverb as a parallel path
-const reverbGain = new GainNode(audioCtx, { gain: 0.3 });
-panners.forEach((panner) => {
-    audioSource.connect(panner).connect(reverbNode).connect(reverbGain).connect(masterGain);
-});
-
-/*--------------------UI Controls--------------------*/
-// Play/Pause button functionality
-const playPauseButton = document.getElementById('playPauseButton');
-playPauseButton.addEventListener('click', togglePlayback);
-
-function togglePlayback() {
-    // Ensure audio context is running
-    if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-    }
-    
-    if (playPauseButton.dataset.playing === 'false') {
-        // Start playback
-        audioElement.play();
-        playPauseButton.dataset.playing = 'true';
-        playPauseButton.style.setProperty('--play-pause-icon', '"\\23F8"'); // Pause icon
-        playPauseButton.title = "Pause Audio"; // Update tooltip text
-        
-        // Start pattern switching at current time position
-        startPatternSwitching();
-    } else {
-        // Pause playback
-        audioElement.pause();
-        playPauseButton.dataset.playing = 'false';
-        playPauseButton.style.setProperty('--play-pause-icon', '"\\25B6"'); // Play icon
-        playPauseButton.title = "Play Audio"; // Update tooltip text
-        
-        // Stop pattern switching
-        stopPatternSwitching();
-    }
+if (!audioElement) {
+    console.error("Audio element with ID 'double' not found!");
 }
 
-// Reset button functionality
-const resetButton = document.getElementById('resetButton');
-resetButton.addEventListener('click', resetPlayback);
-
-function resetPlayback() {
-    // Reset audio
-    const wasPlaying = playPauseButton.dataset.playing === 'true';
-    audioElement.pause();
-    audioElement.currentTime = 0;
-    playPauseButton.dataset.playing = 'false';
-    playPauseButton.style.setProperty('--play-pause-icon', '"\\25B6"');
-    
-    // Reset pattern index
-    currentPatternIndex = 0;
-    
-    // Apply the initial pattern
-    applyPattern(currentPatternIndex);
-    
-    // Stop pattern switching
-    stopPatternSwitching();
-    
-    // Reset orientation via the visualizer's reset method
-    if (window.visualizer3D) {
-        window.visualizer3D.resetOrientation();
-    }
-    
-    // Restart playback if it was playing
-    if (wasPlaying) {
-        setTimeout(() => togglePlayback(), 50);
-    }
-}
-
-// Function to ensure audio context is running after user interaction
-function ensureAudioContextRunning() {
-    if (audioCtx.state !== 'running') {
-        audioCtx.resume().then(() => {
-            console.log('AudioContext resumed successfully');
-        });
-    }
-}
-
-// React to user interactions
-document.addEventListener('click', ensureAudioContextRunning);
-document.addEventListener('keydown', ensureAudioContextRunning);
-
-// Set initial gain values for the speakers
-function setInitialSpeakerGains() {
-    // Set initial gain values for demonstration
-    const initialGains = [0.5, 0.3, 0.7, 0.4, 0.6, 0.2];
-    
-    gainNodes.forEach((gainNode, index) => {
-        gainNode.gain.value = initialGains[index];
-    });
-    
-    // Update the visualization
-    if (window.updateVisualization3D) {
-        window.updateVisualization3D(gainNodes);
-    }
-}
-
-// Initialize when the page is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    // Set initial speaker gain values after a short delay
-    // to make sure visualization is ready
-    setTimeout(setInitialSpeakerGains, 1000);
-    
-    // Add keyboard shortcuts for adjusting speaker gains
-    document.addEventListener('keydown', (event) => {
-        // Keys 1-6 control individual speaker volumes
-        if (event.key >= '1' && event.key <= '6') {
-            const index = parseInt(event.key) - 1;
-            const currentGain = gainNodes[index].gain.value;
-            const newGain = currentGain < 0.5 ? 1.0 : 0.0; // Toggle between off and full
-            
-            // Smoothly transition to new value
-            gainNodes[index].gain.setTargetAtTime(newGain, audioCtx.currentTime, 0.1);
-            
-            // Update visualization
-            if (window.updateVisualization3D) {
-                // Give a little time for the transition, then update
-                setTimeout(() => {
-                    window.updateVisualization3D(gainNodes);
-                }, 100);
-            }
-        }
-    });
-    
-    // Set title attributes for tooltips
-    if (playPauseButton) playPauseButton.title = "Play Audio";
-    if (resetButton) resetButton.title = "Reset to Beginning";
-});
-
-// Pattern switching control functions
-let patternInterval = null;
-let currentPatternIndex = 0;
-
-function startPatternSwitching() {
-    // Clear any existing interval
-    stopPatternSwitching();
-    
-    // Start tracking time for pattern changes
-    patternInterval = setInterval(checkTimeAndUpdatePattern, 50); // Check every 50ms
-}
-
-function stopPatternSwitching() {
-    if (patternInterval) {
-        clearInterval(patternInterval);
-        patternInterval = null;
-    }
-}
-
-// Accurate timestamp and pattern arrays for the audio piece
-const images = [
-    "sigle1.png", "sigle2.png", "sigle3.png", "sigle4.png", "sigle5.png", "sigle6.png", 
-    "sigle7.png", "sigle8.png", "sigle9.png", "sigle10.png", "sigle11.png", "sigle12.png", 
-    "sigle13.png", "sigle14.png", "sigle15.png", "sigle16.png", "sigle17.png", "sigle18.png", 
-    "sigle19.png", "sigle20.png", "sigle21.png", "sigle22.png", "sigle23.png", "sigle24.png", 
-    "sigle25.png", "sigle26.png", "sigle27.png"
-];
-
+// Audio timestamps and patterns (unchanged)
 const timestamps = [
     0, 1.483, 3.311, 4.59, 7.863, 11.365, 17.314, 18.926, 23.75, 
     31.035, 33.334, 36.547, 37.723, 40.114, 41.014, 42.203, 43.957, 
@@ -297,137 +28,506 @@ const timestamps = [
 ];
 
 const presets = [
-    [1, 0, 0, 0, 0, 0],
-    [0, 0, 1, 0, 0, 0],
-    [0, 0, 0, 0, 1, 0],
-    [0, 1, 0, 0, 0, 0],
-    [0, 0, 0, 0, 1, 0],
-    [0, 0, 0, 1, 0, 0],
-    [0, 0, 0, 0, 0, 1],
-    [0, 0, 1, 0, 0, 0],
-    [0, 0, 1, 0, 0, 1],
-    [0, 1, 0, 0, 1, 0],
-    [0, 1, 0, 1, 0, 0],
-    [1, 0, 0, 0, 0, 1],
-    [1, 1, 0, 0, 0, 0],
-    [0, 0, 0, 1, 1, 0],
-    [0, 0, 1, 0, 0, 1],
-    [0, 1, 1, 0, 0, 0],
-    [0, 1, 1, 1, 0, 0],
-    [0, 1, 0, 1, 1, 0],
-    [1, 1, 0, 0, 1, 0],
-    [1, 0, 0, 0, 1, 1],
-    [0, 0, 0, 0, 0, 1],
-    [0, 0, 0, 1, 0, 1],
-    [1, 0, 0, 1, 0, 1],
-    [1, 0, 1, 1, 0, 1],
-    [1, 1, 1, 1, 0, 1],
-    [1, 1, 1, 1, 1, 1],
-    [0, 0, 0, 0, 0, 0]
+    [1, 0, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 1, 0],
+    [0, 1, 0, 0, 0, 0], [0, 0, 0, 0, 1, 0], [0, 0, 0, 1, 0, 0],
+    [0, 0, 0, 0, 0, 1], [0, 0, 1, 0, 0, 0], [0, 0, 1, 0, 0, 1],
+    [0, 1, 0, 0, 1, 0], [0, 1, 0, 1, 0, 0], [1, 0, 0, 0, 0, 1],
+    [1, 1, 0, 0, 0, 0], [0, 0, 0, 1, 1, 0], [0, 0, 1, 0, 0, 1],
+    [0, 1, 1, 0, 0, 0], [0, 1, 1, 1, 0, 0], [0, 1, 0, 1, 1, 0],
+    [1, 1, 0, 0, 1, 0], [1, 0, 0, 0, 1, 1], [0, 0, 0, 0, 0, 1],
+    [0, 0, 0, 1, 0, 1], [1, 0, 0, 1, 0, 1], [1, 0, 1, 1, 0, 1],
+    [1, 1, 1, 1, 0, 1], [1, 1, 1, 1, 1, 1], [0, 0, 0, 0, 0, 0]
 ];
 
-// Make timestamps and presets available globally for the anticipation visualization
+// Make timestamps and presets available globally
 window.timestamps = timestamps;
 window.presets = presets;
 
-// Function to check audio time and update pattern accordingly
-function checkTimeAndUpdatePattern() {
-    if (!audioElement || audioElement.paused) return;
+// Pattern switching variables
+let patternInterval = null;
+let currentPatternIndex = 0;
+
+// UI Controls
+const playPauseButton = document.getElementById('playPauseButton');
+const resetButton = document.getElementById('resetButton');
+
+if (!playPauseButton) console.error("Play/Pause button not found!");
+if (!resetButton) console.error("Reset button not found!");
+
+// Use a simple flag to track initialization attempts
+let initializationAttempted = false;
+
+// Function to initialize audio context with user gesture
+function initAudioContext() {
+    if (audioCtx) return Promise.resolve(); // Already initialized
     
-    const currentTime = audioElement.currentTime;
+    console.log("Initializing Audio Context...");
     
-    // Find the appropriate pattern for the current time
-    let newIndex = timestamps.findIndex((timestamp, index) => {
-        const nextTimestamp = timestamps[index + 1] || Infinity;
-        return currentTime >= timestamp && currentTime < nextTimestamp;
+    return new Promise((resolve, reject) => {
+        try {
+            // Create audio context
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext({ latencyHint: 'interactive' });
+            
+            // Make globally accessible
+            window.audioCtx = audioCtx;
+            window.listener = audioCtx.listener;
+            
+            // Configure basic settings immediately
+            audioCtx.destination.channelCount = audioCtx.destination.maxChannelCount;
+            audioCtx.destination.channelCountMode = "explicit";
+            audioCtx.destination.channelInterpretation = "speakers";
+            
+            // Set listener position and orientation
+            const listener = audioCtx.listener;
+            listener.positionX.value = posX;
+            listener.positionY.value = posY;
+            listener.positionZ.value = posZ;
+            listener.forwardX.value = 0;
+            listener.forwardY.value = 0;
+            listener.forwardZ.value = -1;
+            listener.upX.value = 0;
+            listener.upY.value = 1;
+            listener.upZ.value = 0;
+            
+            console.log("Audio Context created. Setting up Web Audio...");
+            
+            // Set up audio connections
+            setupWebAudio().then(() => {
+                audioInitialized = true;
+                console.log("Audio fully initialized!");
+                resolve();
+            }).catch(error => {
+                console.error("Error during Web Audio setup:", error);
+                // Still resolve since we at least have the AudioContext
+                resolve();
+            });
+        } catch (error) {
+            console.error("Failed to create Audio Context:", error);
+            reject(error);
+        }
+    });
+}
+
+// Function to set up all the Web Audio connections
+function setupWebAudio() {
+    return new Promise((resolve, reject) => {
+        if (!audioCtx || !audioElement) {
+            reject(new Error("Missing AudioContext or audio element"));
+            return;
+        }
+        
+        // Create audio source from element
+        try {
+            audioSource = audioCtx.createMediaElementSource(audioElement);
+        } catch (e) {
+            console.error("Error creating media element source:", e);
+            
+            // If already connected, just resolve
+            if (e.message && e.message.includes('already connected')) {
+                console.log("Audio element already connected to an audio context");
+                resolve();
+                return;
+            }
+            
+            reject(e);
+            return;
+        }
+        
+        console.log("Audio source created successfully");
+        
+        // Create spatial audio setup
+        try {
+            // Create 6 audio sources in a hexagonal arrangement
+            const speakerRadius = 7;
+            const sources = Array.from({ length: 6 }, (_, i) => getHexPosition(i, speakerRadius));
+            
+            // Create simplified panners
+            panners = sources.map(source => {
+                return new PannerNode(audioCtx, {
+                    panningModel: "HRTF",
+                    distanceModel: "inverse",
+                    positionX: source.x,
+                    positionY: source.y,
+                    positionZ: source.z,
+                    refDistance: 2,
+                    maxDistance: 10
+                });
+            });
+            
+            // Create gain nodes and master gain
+            gainNodes = panners.map(() => new GainNode(audioCtx, { gain: 0 }));
+            window.gainNodes = gainNodes;
+            masterGain = new GainNode(audioCtx, { gain: 0.8 });
+            
+            // Connect everything together
+            panners.forEach((panner, index) => {
+                audioSource.connect(panner);
+                panner.connect(gainNodes[index]);
+                gainNodes[index].connect(masterGain);
+            });
+            
+            masterGain.connect(audioCtx.destination);
+            
+            // Set initial gains
+            setInitialSpeakerGains();
+            
+            console.log("Spatial audio setup complete");
+            resolve();
+        } catch (e) {
+            console.error("Error setting up spatial audio:", e);
+            
+            // Create a fallback direct connection if spatial setup fails
+            try {
+                console.log("Creating fallback direct audio connection");
+                audioSource.connect(audioCtx.destination);
+                resolve();
+            } catch (fallbackError) {
+                reject(fallbackError);
+            }
+        }
+    });
+}
+
+// Function to calculate hexagonal speaker positions
+function getHexPosition(index, radius) {
+    const speakerAngles = [210, 150, 90, 30, 330, 270];
+    const angle = (speakerAngles[index] * Math.PI) / 180;
+    return {
+        x: radius * Math.sin(angle),
+        y: posY,
+        z: radius * Math.cos(angle)
+    };
+}
+
+// Simplified play/pause handler
+function togglePlayback() {
+    // Check if audio element exists
+    if (!audioElement) {
+        console.error("Audio element not found!");
+        alert("Audio element not found. Check the HTML structure.");
+        return;
+    }
+    
+    console.log("Toggle playback called");
+    
+    // Initialize audio if needed
+    if (!audioCtx) {
+        initAudioContext().then(() => {
+            actuallyTogglePlayback();
+        }).catch(error => {
+            console.error("Failed to initialize audio:", error);
+            
+            // Try direct playback as last resort
+            tryDirectPlayback();
+        });
+    } else {
+        // Resume context if needed
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume().then(() => {
+                actuallyTogglePlayback();
+            }).catch(error => {
+                console.error("Failed to resume audio context:", error);
+                tryDirectPlayback();
+            });
+        } else {
+            actuallyTogglePlayback();
+        }
+    }
+}
+
+// Function to actually handle play/pause state
+function actuallyTogglePlayback() {
+    if (playPauseButton.dataset.playing === 'false') {
+        console.log("Attempting to play audio...");
+        
+        const playPromise = audioElement.play();
+        if (playPromise !== undefined) {
+            playPromise.then(() => {
+                console.log("Audio playback started successfully!");
+                playPauseButton.dataset.playing = 'true';
+                playPauseButton.style.setProperty('--play-pause-icon', '"\\23F8"');
+                playPauseButton.title = "Pause Audio";
+                
+                if (audioInitialized) {
+                    startPatternSwitching();
+                }
+            }).catch(error => {
+                console.error("Error playing audio:", error);
+                tryDirectPlayback();
+            });
+        }
+    } else {
+        console.log("Pausing audio");
+        audioElement.pause();
+        playPauseButton.dataset.playing = 'false';
+        playPauseButton.style.setProperty('--play-pause-icon', '"\\25B6"');
+        playPauseButton.title = "Play Audio";
+        stopPatternSwitching();
+    }
+}
+
+// Last resort direct playback
+function tryDirectPlayback() {
+    console.log("Attempting direct playback as fallback");
+    
+    // Unmute and set volume explicitly
+    audioElement.muted = false;
+    audioElement.volume = 1.0;
+    
+    // Add inline event listeners for this attempt
+    const successListener = () => {
+        console.log("Direct playback successful!");
+        playPauseButton.dataset.playing = 'true';
+        playPauseButton.style.setProperty('--play-pause-icon', '"\\23F8"');
+        audioElement.removeEventListener('play', successListener);
+    };
+    
+    const errorListener = (e) => {
+        console.error("Direct playback failed:", e);
+        audioElement.removeEventListener('error', errorListener);
+        alert("Could not play audio. Please check if the audio file exists and try again.");
+    };
+    
+    audioElement.addEventListener('play', successListener);
+    audioElement.addEventListener('error', errorListener);
+    
+    // Try to play with a slight delay
+    setTimeout(() => {
+        try {
+            const promise = audioElement.play();
+            if (promise) {
+                promise.catch(e => console.error("Promise rejection in direct play:", e));
+            }
+        } catch (e) {
+            console.error("Exception in direct play:", e);
+        }
+    }, 300);
+}
+
+// Connect the play button to the toggle function
+playPauseButton.addEventListener('click', togglePlayback);
+
+// Reset button functionality
+resetButton.addEventListener('click', () => {
+    const wasPlaying = playPauseButton.dataset.playing === 'true';
+    audioElement.pause();
+    audioElement.currentTime = 0;
+    
+    playPauseButton.dataset.playing = 'false';
+    playPauseButton.style.setProperty('--play-pause-icon', '"\\25B6"');
+    
+    currentPatternIndex = 0;
+    applyPattern(currentPatternIndex);
+    stopPatternSwitching();
+    
+    if (window.visualizer3D) {
+        window.visualizer3D.resetOrientation();
+    }
+    
+    if (wasPlaying) {
+        setTimeout(() => playPauseButton.click(), 50);
+    }
+});
+
+// Handle document click to initialize audio on any user interaction
+document.addEventListener('click', event => {
+    // Only initialize once and only for actual user clicks (not programmatic)
+    if (!initializationAttempted && event.isTrusted) {
+        initializationAttempted = true;
+        initAudioContext().catch(e => console.error("Initialization on click failed:", e));
+    }
+    
+    // Also try to resume the context if it exists but is suspended
+    if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(e => console.error("Failed to resume on click:", e));
+    }
+});
+
+// Set initial gain values
+function setInitialSpeakerGains() {
+    if (!gainNodes.length) return;
+    
+    const initialGains = [0.5, 0.3, 0.7, 0.4, 0.6, 0.2];
+    gainNodes.forEach((gainNode, index) => {
+        gainNode.gain.value = initialGains[index];
     });
     
-    // Fallback to the first pattern if none found
-    if (newIndex === -1) newIndex = 0;
-    
-    // Only update if the pattern has changed
-    if (newIndex !== currentPatternIndex) {
-        currentPatternIndex = newIndex;
-        applyPattern(currentPatternIndex);
-    }
-
-    // Update the visualization regardless of pattern changes for smooth animation
     if (window.updateVisualization3D) {
         window.updateVisualization3D(gainNodes);
+    }
+}
+
+// Start pattern switching
+function startPatternSwitching() {
+    stopPatternSwitching();
+    patternInterval = setInterval(() => {
+        if (audioElement.paused) return;
+        
+        const currentTime = audioElement.currentTime;
+        
+        let newIndex = timestamps.findIndex((timestamp, index) => {
+            const nextTimestamp = timestamps[index + 1] || Infinity;
+            return currentTime >= timestamp && currentTime < nextTimestamp;
+        });
+        
+        if (newIndex === -1) newIndex = 0;
+        
+        if (newIndex !== currentPatternIndex) {
+            currentPatternIndex = newIndex;
+            applyPattern(currentPatternIndex);
+        }
+        
+        if (window.updateVisualization3D) {
+            window.updateVisualization3D(gainNodes);
+        }
+    }, 50);
+}
+
+// Stop pattern switching
+function stopPatternSwitching() {
+    if (patternInterval) {
+        clearInterval(patternInterval);
+        patternInterval = null;
     }
 }
 
 // Apply a specific pattern
 function applyPattern(index) {
-    const pattern = presets[index];
+    if (!gainNodes.length) return;
     
-    // Apply the pattern with a smooth transition
+    const pattern = presets[index];
     pattern.forEach((gain, idx) => {
         if (gainNodes[idx]) {
             gainNodes[idx].gain.setTargetAtTime(gain, audioCtx.currentTime, 0.1);
         }
     });
-    
-    // Update visualization
-    if (window.updateVisualization3D) {
-        setTimeout(() => {
-            window.updateVisualization3D(gainNodes);
-        }, 100);
-    }
 }
 
-// Handle the end of audio playback
-audioElement.addEventListener('ended', () => {
-    playPauseButton.dataset.playing = 'false';
-    playPauseButton.style.setProperty('--play-pause-icon', '"\\25B6"');
-    
-    // Stop pattern switching
-    stopPatternSwitching();
+// Add simple audio event listeners for debugging
+audioElement.addEventListener('loadeddata', () => {
+    console.log("Audio loaded successfully! Duration:", audioElement.duration);
 });
 
-// Update 3D visualization when audio is playing
-audioElement.addEventListener('timeupdate', () => {
-    // Update visualizations based on the current speaker gains
-    if (window.updateVisualization3D) {
-        window.updateVisualization3D(gainNodes);
-    }
-    
-    // Also update audio visualizer playhead position
-    if (window.audioVisualizer && window.audioVisualizer.updateSpeakerActivity) {
-        window.audioVisualizer.updateSpeakerActivity();
-    }
+audioElement.addEventListener('play', () => {
+    console.log("Audio play event triggered");
 });
 
-// Sheet music functionality
+audioElement.addEventListener('error', (e) => {
+    console.error("Audio error event:", e);
+    console.error("Audio error code:", audioElement.error ? audioElement.error.code : "No error code");
+    console.error("Audio network state:", audioElement.networkState);
+    alert("Error with audio playback. Check browser console for details.");
+});
+
+// Initialize on DOM load
 document.addEventListener('DOMContentLoaded', () => {
-    // Create toggle button for sheet music
-    const toggleButton = document.createElement('div');
-    toggleButton.className = 'toggle-sheet-music';
-    toggleButton.innerHTML = 'Toggle Score';
+    console.log("DOM loaded, initializing UI...");
     
-    // Add toggle button to the DOM
-    document.getElementById('immersive-container').appendChild(toggleButton);
+    // Set initial button states
+    if (playPauseButton) {
+        playPauseButton.dataset.playing = 'false';
+        playPauseButton.title = "Play Audio";
+    }
     
-    const sheetMusicContainer = document.querySelector('.sheet-music-container');
-    let isSheetMusicVisible = true;
+    if (resetButton) {
+        resetButton.title = "Reset to Beginning";
+    }
     
-    // Toggle sheet music visibility
-    toggleButton.addEventListener('click', () => {
-        if (isSheetMusicVisible) {
-            sheetMusicContainer.style.height = '0';
-            toggleButton.style.bottom = '0';
-            document.querySelector('.audio-controls').style.bottom = '30px';
-            document.getElementById('joystick-container').style.bottom = '100px';
-        } else {
-            sheetMusicContainer.style.height = window.innerWidth <= 768 ? '100px' : '150px';
-            toggleButton.style.bottom = window.innerWidth <= 768 ? '100px' : '150px';
-            document.querySelector('.audio-controls').style.bottom = window.innerWidth <= 768 ? '120px' : '170px';
-            document.getElementById('joystick-container').style.bottom = window.innerWidth <= 768 ? '120px' : '170px';
+    // Add a super simple direct play button
+    const container = document.getElementById('immersive-container');
+    const directPlayButton = document.createElement('button');
+    directPlayButton.textContent = "Simple Play";
+    directPlayButton.style.position = "absolute";
+    directPlayButton.style.left = "10px";
+    directPlayButton.style.top = "10px";
+    directPlayButton.style.zIndex = "1000";
+    
+    directPlayButton.addEventListener('click', function() {
+        // Simplest possible approach
+        const audio = document.getElementById("double");
+        if (audio) {
+            try {
+                // First try to play directly
+                audio.play().then(() => {
+                    console.log("Simple play successful");
+                }).catch(e => {
+                    console.error("Simple play failed:", e);
+                    
+                    // If that fails, create a brand new audio element and try again
+                    const newAudio = new Audio(audio.src);
+                    newAudio.play().then(() => {
+                        console.log("New audio element play successful");
+                    }).catch(e2 => {
+                        console.error("New audio element play failed too:", e2);
+                    });
+                });
+            } catch (e) {
+                console.error("Error in simple play:", e);
+            }
         }
-        isSheetMusicVisible = !isSheetMusicVisible;
     });
     
-    // Adjust positions now that we've removed the audio visualization container
-    document.querySelector('.audio-controls').style.bottom = window.innerWidth <= 768 ? '120px' : '170px';
-    document.getElementById('joystick-container').style.bottom = window.innerWidth <= 768 ? '120px' : '170px';
+    container.appendChild(directPlayButton);
+    
+    // Check if audio file exists
+    checkAudioFileExists();
 });
+
+// Function to check if the audio file exists
+function checkAudioFileExists() {
+    if (!audioElement || !audioElement.src) {
+        console.error("No audio element or source to check");
+        return;
+    }
+    
+    // Try multiple approaches to verify the file
+    
+    // 1. Use fetch (might fail with CORS)
+    fetch(audioElement.src, { method: 'HEAD' })
+        .then(response => {
+            if (response.ok) {
+                console.log("✓ Audio file exists (fetch check):", audioElement.src);
+            } else {
+                console.error("✗ Audio file not found (fetch check):", audioElement.src);
+                showFileErrorMessage();
+            }
+        })
+        .catch(error => {
+            console.warn("Fetch check failed (might be CORS):", error);
+            
+            // 2. Try a different approach - create a temporary Audio object
+            const tempAudio = new Audio();
+            tempAudio.addEventListener('canplaythrough', () => {
+                console.log("✓ Audio file exists (canplaythrough check)");
+            });
+            tempAudio.addEventListener('error', () => {
+                console.error("✗ Audio file not found (canplaythrough check)");
+                showFileErrorMessage();
+            });
+            tempAudio.src = audioElement.src;
+        });
+}
+
+// Show error message if the file can't be found
+function showFileErrorMessage() {
+    // Create a visible error message on the page
+    const container = document.getElementById('immersive-container');
+    const errorMsg = document.createElement('div');
+    errorMsg.style.position = "absolute";
+    errorMsg.style.top = "50%";
+    errorMsg.style.left = "50%";
+    errorMsg.style.transform = "translate(-50%, -50%)";
+    errorMsg.style.background = "rgba(0,0,0,0.8)";
+    errorMsg.style.color = "red";
+    errorMsg.style.padding = "20px";
+    errorMsg.style.borderRadius = "10px";
+    errorMsg.style.zIndex = "2000";
+    errorMsg.innerHTML = `
+        <h2>Audio File Error</h2>
+        <p>Could not load audio file from: ${audioElement.src}</p>
+        <p>Make sure the file exists at the specified path.</p>
+        <p>Expected location: audio/double-clarinet-si.mp3</p>
+    `;
+    container.appendChild(errorMsg);
+}

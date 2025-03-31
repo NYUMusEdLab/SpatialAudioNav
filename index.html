@@ -20,24 +20,13 @@
             <button id="playPauseButton" data-playing="false" title="Play/Pause Audio"></button>
             <button id="resetButton" title="Reset to Beginning"></button>
         </div>
-        
-        <!-- Add sheet music display -->
-        <div class="sheet-music-container">
-            <div class="sheet-music-scroll">
-                <img src="images/score/boulezscoreportraitsigleinitial.png" alt="Sheet Music Score" class="sheet-music-image">
-            </div>
-        </div>
-
-        <!-- Audio visualization container removed as requested -->
     </div>
     
-    <!-- Hidden audio elements -->
-    <audio id="double" src="audio/double-clarinet-si.mp3"></audio>
-    <audio id="premiere" src="audio/double-clarinet-si.mp3"></audio>
-    <audio id="ir-response" src="ir-response/ir-test-jun27.mp3"></audio>
+    <!-- Audio element with explicit crossorigin attribute -->
+    <audio id="double" src="audio/double-clarinet-si.mp3" preload="auto" crossorigin="anonymous"></audio>
     
     <script type="module" src="js/3DVisualization.js"></script>
     <script type="module" src="js/AudioVisualizer.js"></script>
-    <script type="module" src="script.js"></script>
+    <script src="script.js"></script> <!-- Removed type="module" for direct access -->
 </body>
 </html>

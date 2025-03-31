@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Audio Player</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background: #222;
+            color: white;
+        }
+        .player {
+            width: 80%;
+            max-width: 500px;
+            background: #333;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        button {
+            background: #e69138;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        audio {
+            width: 100%;
+            margin-top: 20px;
+        }
+        h1 {
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Simple Audio Player</h1>
+    
+    <div class="player">
+        <p>Testing audio playback for "double-clarinet-si.mp3"</p>
+        
+        <!-- Standard HTML5 audio with controls -->
+        <audio id="audioPlayer" controls crossorigin="anonymous">
+            <source src="audio/double-clarinet-si.mp3" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+        
+        <div>
+            <button id="playButton">Play</button>
+            <button id="pauseButton">Pause</button>
+            <button id="stopButton">Stop</button>
+        </div>
+        
+        <p id="status">Status: Ready</p>
+    </div>
+    
+    <script>
+        const audioPlayer = document.getElementById('audioPlayer');
+        const playButton = document.getElementById('playButton');
+        const pauseButton = document.getElementById('pauseButton');
+        const stopButton = document.getElementById('stopButton');
+        const status = document.getElementById('status');
+        
+        playButton.addEventListener('click', function() {
+            try {
+                const playPromise = audioPlayer.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        status.textContent = 'Status: Playing';
+                    }).catch(error => {
+                        status.textContent = 'Status: Play failed - ' + error.message;
+                    });
+                }
+            } catch (e) {
+                status.textContent = 'Status: Error - ' + e.message;
+            }
+        });
+        
+        pauseButton.addEventListener('click', function() {
+            audioPlayer.pause();
+            status.textContent = 'Status: Paused';
+        });
+        
+        stopButton.addEventListener('click', function() {
+            audioPlayer.pause();
+            audioPlayer.currentTime = 0;
+            status.textContent = 'Status: Stopped';
+        });
+        
+        // Log events
+        audioPlayer.addEventListener('playing', () => {
+            console.log('Audio is playing');
+            status.textContent = 'Status: Playing';
+        });
+        
+        audioPlayer.addEventListener('error', (e) => {
+            console.error('Audio error:', e);
+            status.textContent = 'Status: Error loading audio';
+        });
+        
+        // Check if file exists
+        fetch('audio/double-clarinet-si.mp3', { method: 'HEAD' })
+            .then(response => {
+                if (response.ok) {
+                    status.textContent = 'Status: Audio file found';
+                } else {
+                    status.textContent = 'Status: Audio file not found!';
+                }
+            })
+            .catch(error => {
+                status.textContent = 'Status: Error checking file - ' + error.message;
+            });
+    </script>
+</body>
+</html>
