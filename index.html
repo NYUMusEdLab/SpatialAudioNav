@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spatial Audio Experience</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.10.0/dist/nipplejs.min.js"></script>
+</head>
+<body>
+    <div id="immersive-container">
+        <div id="scene-container"></div>
+        <div id="joystick-container"></div>
+        <div class="topdown-view">
+            <div class="view-label">2D View</div>
+            <canvas id="topdown-canvas"></canvas>
+        </div>
+        <div class="audio-controls">
+            <button id="playPauseButton" data-playing="false" title="Play/Pause Audio"></button>
+            <button id="resetButton" title="Reset to Beginning"></button>
+        </div>
+        
+        <!-- Add sheet music display -->
+        <div class="sheet-music-container">
+            <div class="sheet-music-scroll">
+                <img src="images/score/boulezscoreportraitsigleinitial.png" alt="Sheet Music Score" class="sheet-music-image">
+            </div>
+        </div>
+
+        <!-- Audio visualization container removed as requested -->
+    </div>
+    
+    <!-- Hidden audio elements -->
+    <audio id="double" src="audio/double-clarinet-si.mp3"></audio>
+    <audio id="premiere" src="audio/double-clarinet-si.mp3"></audio>
+    <audio id="ir-response" src="ir-response/ir-test-jun27.mp3"></audio>
+    
+    <script type="module" src="js/3DVisualization.js"></script>
+    <script type="module" src="js/AudioVisualizer.js"></script>
+    <script type="module" src="script.js"></script>
+</body>
+</html>

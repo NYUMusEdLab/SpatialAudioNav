@@ -1,0 +1,343 @@
+/* Reset styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body, html {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    background-color: #000;
+    font-family: 'Inter', sans-serif;
+    color: #f0f0f0;
+}
+
+/* Immersive container - takes the full screen */
+#immersive-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #000;
+    overflow: hidden;
+}
+
+#scene-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* Joystick styles */
+#joystick-container {
+    position: absolute;
+    bottom: 290px;
+    right: 100px;
+    width: 120px;
+    height: 120px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    z-index: 100;
+    border: 2px solid rgba(230, 145, 56, 0.7);
+    box-shadow: 0 0 20px rgba(230, 145, 56, 0.3);
+}
+
+/* Rotation indicator */
+.rotation-indicator {
+    position: absolute;
+    top: 30px;
+    right: 30px;
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 10px 15px;
+    border-radius: 30px;
+    color: #e69138;
+    font-weight: bold;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 100;
+    border: 1px solid #e69138;
+    box-shadow: 0 0 10px rgba(230, 145, 56, 0.4);
+}
+
+.indicator-label {
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.indicator-value {
+    font-size: 20px;
+}
+
+/* Audio controls */
+.audio-controls {
+    position: absolute;
+    bottom: 290px;
+    left: 30px;
+    display: flex;
+    gap: 20px;
+    z-index: 100;
+}
+
+#playPauseButton, #resetButton {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: #e69138;
+    font-size: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.3s ease;
+    border: 2px solid #e69138;
+    box-shadow: 0 0 15px rgba(230, 145, 56, 0.3);
+}
+
+#playPauseButton:hover, #resetButton:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 20px rgba(230, 145, 56, 0.6);
+    background-color: rgba(30, 30, 30, 0.7);
+}
+
+#playPauseButton::before {
+    content: var(--play-pause-icon, "\25B6"); /* Play triangle */
+}
+
+#resetButton::before {
+    content: "\21BA"; /* Curved arrow */
+}
+
+/* Add tooltips for the buttons */
+#playPauseButton, #resetButton {
+    position: relative;
+}
+
+#playPauseButton::after, #resetButton::after {
+    position: absolute;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+
+#playPauseButton::after {
+    content: attr(title); /* Use the title attribute */
+}
+
+#resetButton::after {
+    content: attr(title); /* Use the title attribute */
+}
+
+#playPauseButton:hover::after, #resetButton:hover::after {
+    opacity: 1;
+}
+
+/* Sound wave visualization */
+.sound-wave {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0.7;
+    background: radial-gradient(circle, rgba(230, 145, 56, 0.5) 0%, rgba(230, 145, 56, 0) 70%);
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* 2D Top-down visualization - make it larger and more prominent */
+.topdown-view {
+    position: absolute;
+    top: 50px;
+    right: 30px;
+    width: 200px;
+    height: 200px;
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 10px;
+    padding: 10px;
+    z-index: 100;
+    border: 1px solid #e69138;
+    box-shadow: 0 0 20px rgba(230, 145, 56, 0.6);
+    display: flex;
+    flex-direction: column;
+}
+
+.view-label {
+    font-size: 13px;
+    color: #e69138;
+    margin-bottom: 5px;
+    text-align: center;
+    text-shadow: 0 0 5px rgba(230, 145, 56, 0.8);
+}
+
+#topdown-canvas {
+    flex: 1;
+    width: 100%;
+    height: calc(100% - 17px);
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 5px;
+}
+
+/* Sheet Music Display */
+.sheet-music-container {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 150px; /* Height of the sheet music container */
+    background-color: rgba(0, 0, 0, 0.7);
+    border-top: 1px solid #e69138;
+    box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.5);
+    z-index: 90;
+    overflow: hidden;
+    transition: height 0.3s ease;
+}
+
+.sheet-music-scroll {
+    width: 100%;
+    height: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    padding: 10px 0;
+    display: flex;
+    align-items: center;
+}
+
+.sheet-music-image {
+    height: calc(100% - 20px); /* Adjust for padding */
+    max-height: 130px;
+    object-fit: contain;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+/* Scrollbar styling for the sheet music */
+.sheet-music-scroll::-webkit-scrollbar {
+    height: 8px;
+}
+
+.sheet-music-scroll::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+.sheet-music-scroll::-webkit-scrollbar-thumb {
+    background: #e69138;
+    border-radius: 4px;
+}
+
+.sheet-music-scroll::-webkit-scrollbar-thumb:hover {
+    background: #ff9d45;
+}
+
+/* Toggle button for sheet music */
+.toggle-sheet-music {
+    position: absolute;
+    bottom: 150px; /* Updated to sit directly above sheet music */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 20px;
+    background-color: rgba(0, 0, 0, 0.6);
+    border: 1px solid #e69138;
+    border-bottom: none;
+    border-radius: 10px 10px 0 0;
+    color: #e69138;
+    font-size: 12px;
+    text-align: center;
+    cursor: pointer;
+    z-index: 91;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Enhanced Piano Tiles Visualization */
+@keyframes tileGlow {
+    0% { box-shadow: 0 0 8px rgba(255, 149, 0, 0.6); }
+    50% { box-shadow: 0 0 16px rgba(255, 149, 0, 1.0); }
+    100% { box-shadow: 0 0 8px rgba(255, 149, 0, 0.6); }
+}
+
+@keyframes tilePulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.piano-tile {
+    animation: tileGlow 1.5s infinite, tilePulse 1.5s infinite;
+}
+
+/* Visualization instructions */
+.visualization-instructions {
+    position: fixed;
+    top: 260px;
+    right: 30px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: #e69138;
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 14px;
+    max-width: 200px;
+    text-align: center;
+    border: 1px solid #e69138;
+    box-shadow: 0 0 15px rgba(230, 145, 56, 0.5);
+    z-index: 1000;
+    animation: fadeInOut 1s ease-in-out;
+    transition: opacity 1s ease;
+}
+
+@keyframes fadeInOut {
+    0% { opacity: 0; transform: translateY(-20px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+/* For mobile devices */
+@media (max-width: 768px) {
+    #joystick-container {
+        bottom: 220px;
+        right: 30px;
+        width: 100px;
+        height: 100px;
+    }
+    
+    .audio-controls {
+        bottom: 220px;
+        left: 20px;
+    }
+    
+    #playPauseButton, #resetButton {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .topdown-view {
+        width: 160px;
+        height: 160px;
+        top: 60px;
+        right: 20px;
+    }
+
+    .sheet-music-container {
+        height: 100px; /* Smaller height on mobile */
+    }
+    
+    .toggle-sheet-music {
+        bottom: 100px; /* Adjust for smaller sheet music height */
+    }
+}

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Boulez: Dialogue l'ombre double: Transition 2-3</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+  <div class="orange-background">
+    <div class="menu-icon">☰</div>
+  </div>
+  <div class="header-content">
+    <div class="title-container">
+      <h1><i>Transition 3-4</i></h1>
+      <h2>Boulez: <i>Dialogue l'ombre double</i></h2>
+    </div>
+    <button id="helpButton" class="header-button">?</button>
+    <button id="resetOrientationButton" class="header-button">Reset Orientation</button>
+    <!-- <button id="playbackSpeedButton" class="header-button">100%</button> -->
+    <div id="togglePlaybackSpeed">
+      <div class="mode-option" data-mode="70%">70%</div>
+      <div class="mode-option playback-active" data-mode="100%">100%</div>
+    </div>
+    <div id="toggleCircularDisplay">
+      <div class="mode-option" data-mode="on">Circular Panner On</div>
+      <div class="mode-option circular-active" data-mode="off">Circular Panner Off</div>
+    </div>
+    <div id="toggleFooterDisplay">
+      <div class="mode-option" data-mode="on">Live Mix On</div>
+      <div class="mode-option footer-active" data-mode="off">Live Mix Off</div>
+    </div>
+    <div id="toggleContentDisplay">
+      <div class="mode-option active" data-mode="score">Score</div>
+      <div class="mode-option" data-mode="video">Melodic Contour</div>
+      <div class="mode-option" data-mode="techGuide">Tech Guide</div>
+      <!-- <div class="mode-option" data-mode="synthesia">Synthesia</div> -->
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <div id="helpPopup" class="help-window">
+    <div class="popup-content">
+      <span class="close-btn">&times;</span>
+      <div class="help-pages">
+        <div class="help-page active" data-page="1">
+          <h2>About the Composition</h2>
+          <p>Dialogue de l'ombre double is a groundbreaking composition by Pierre Boulez for clarinet and electronic music, originally inspired by a scene from Paul Claudel's play Le Soulier de Satin. In the play, the “double shadow” of a man and woman is projected onto a wall, treated as a single character. Similarly, in Boulez's piece, a live solo clarinet (called “clarinette première”) dialogues with a pre-recorded clarinet part (the “clarinette double”) spatialized over a six-point loudspeaker system surrounding the audience.</p>
+          <p>Boulez's innovative use of spatial audio in this piece was truly ahead of its time. By strategically distributing the pre-recorded clarinet part across the six speakers, Boulez created an immersive and dynamic listening experience that enhanced the musical dialogue between the live and recorded elements. This pioneering approach to spatialization opened up new possibilities for the role of sound in space and its impact on the listener's perception of the music.</p>
+          <p>The work consists of a pre-recorded Sigle Initial, Sigle Final, five Transitions, and six Strophes performed by the live clarinet. The spatialization of the electronic parts serves to create an ethereal atmosphere contrasting with the live clarinet and to analyze the musical material through various techniques such as density variation, circular motion, foreground/background effects, and zig-zag movement.</p>
+        </div>
+        <div class="help-page" data-page="2">
+          <h2>Commission and Collaboration</h2>
+          <p>Content</p>
+        </div>
+        <div class="help-page" data-page="3">
+          <h2>Pierre Boulez</h2>
+          <p>Content</p>
+        </div>
+        <div class="help-page" data-page="4">
+          <h2>Preserving Boulez's Legacy</h2>
+          <p>Content</p>
+        </div>
+      </div>
+      <div class="nav-buttons">
+        <button id="prevPage" class="nav-button">&lt;</button>
+        <div class="page-indicators"></div>
+        <button id="nextPage" class="nav-button">&gt;</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="left-side" class="section">
+    <div class="scroll-container">
+      <img src="images/score/boulezdialoguescoretransition3-4.png" alt="Boulez Score Portrait Transition 3-4">
+    </div>
+
+    <div class="technical-guide-container">
+      <div id="technical-guide" style="display: none;">
+        <h2>Technical Guide</h2>
+        <table class="zig-zag-table">
+          <thead>
+          <tr>
+            <th><span class="keyword" data-word="CUE">CUE</span></th>
+            <th>Speaker(s) ON</th>
+            <th>Mix Approach</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr><td>1</td><td>1</td><td><span class="keyword" data-word="Speaker 1">Start with Speaker 1</span> with 1st speaker</td></tr>
+          <tr><td>2</td><td>3</td><td><span class="keyword" data-word="CIRCLE PAN">CIRCLE PAN</span> Circle Pan with accelerando</td></tr>
+          <tr><td>3</td><td>5</td><td><span class="keyword" data-word="Speaker 1">Return to Speaker 1</span> with 1st speaker</td></tr>
+
+          </tbody>
+        </table>
+      </div>
+
+      <div id="keyword">
+        <div class="keyword-header">
+          <h1>KEYWORD</h1>
+          <button class="close-btn">&times;</button>
+        </div>
+        <div class="keyword-content">
+          <div class="keyword-title"></div>
+          <div class="keyword-definition">
+            <h2>DEFINITION</h2>
+            <p></p>
+          </div>
+          <div class="fresh-ideas">
+            <h2>FRESH IDEAS</h2>
+            <div class="idea-content">
+              <button class="refresh-btn">↻</button>
+              <p></p>
+            </div>
+          </div>
+
+          <!-- TEST SCROLLING ABILITY -->
+          <div class="fresh-ideas">
+            <h1>FRESH IDEAS</h1><h1>FRESH IDEAS</h1><h1>FRESH IDEAS</h1><h1>FRESH IDEAS</h1><h1>FRESH IDEAS</h1><h1>FRESH IDEAS</h1><h1>FRESH IDEAS</h1><h1>FRESH IDEAS</h1><h1>FRESH IDEAS</h1><h1>FRESH IDEAS</h1>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div id="synthesia-container" style="display: none;">
+      <div id="falling-notes-area"></div>
+      <div id="speaker-keys">
+        <div class="speaker-key" data-index="1">1</div>
+        <div class="speaker-key" data-index="2">2</div>
+        <div class="speaker-key" data-index="3">3</div>
+        <div class="speaker-key" data-index="4">4</div>
+        <div class="speaker-key" data-index="5">5</div>
+        <div class="speaker-key" data-index="6">6</div>
+      </div>
+    </div>
+
+    <div id="videoContainer">
+      <video id="videoPlayer" src="video/video.mp4"></video>
+    </div>
+  </div>
+
+  <div id="right-side" class="section">
+    <div id="canvas-container">
+      <canvas id="audioVisualizerTop" width="500" height="500"></canvas>
+      <canvas id="audioVisualizerFront" width="500" height="500" style="display:none;"></canvas>
+    </div>
+    <div id="controls">
+      <div class="slider-column" id="column1"></div>
+      <div class="slider-column" id="column2" style="display:none;">
+        <div class="slider-container">
+          <label for="ramp-time-slider">
+            Ramp Time:
+            <span id="ramp-time-value">150 ms</span>
+          </label>
+          <input type="range" id="ramp-time-slider" min="0" max="1000" step="10" value="150">
+        </div>
+      </div>
+      <div class="slider-column" id="column3" style="display:none;"></div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="footer-grid">
+    <div class="button-column">
+      <button id="resetButton"></button>
+      <button id="playPauseButton" data-playing="false"></button>
+    </div>
+    <div class="content-column">
+      <div id="progressContainer"></div>
+      <div id="presetControls">
+        <button id="preset1" class="preset-btn" data-preset="100,0,0,0,0,0,0,0"><img src="images/mixing/sigle1.png" alt="Preset 1"></button>
+        <button id="preset2" class="preset-btn" data-preset="0,0,0,0,0,0,0,0"><img src="images/mixing/circlemix.png" alt="Preset 2"></button>
+        <button id="preset3" class="preset-btn" data-preset="0,0,0,0,0,0,0,0"><img src="images/mixing/circlemix.png" alt="Preset 3"></button>
+        <button id="preset4" class="preset-btn" data-preset="100,0,0,0,0,0,0,0"><img src="images/mixing/sigle1.png" alt="Preset 4"></button>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<audio id="double" src="audio/double-clarinet-si.mp3"></audio>
+<audio id="premiere" src="audio/double-clarinet-si.mp3"></audio>
+<audio id="ir-response" src="ir-response/ir-test-jun27.mp3"></audio>
+
+<script type="module" src="scripttransition34.js"></script>
+<script type="module" src="js/OverviewTimeline.js"></script>
+<script type="module" src="js/KeywordPanel.js"></script>
+<!-- <script type="module" src="js/Synthesia.js"></script> -->
+</body>
+</html>
