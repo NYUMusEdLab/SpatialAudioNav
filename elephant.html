@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Cup Detection Audio Control</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.14.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tone/build/Tone.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+        }
+        video, canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        #debug {
+            position: absolute;
+            top: 10px;
+            left: 660px;
+            background: rgba(255, 255, 255, 0.9);
+            font-family: sans-serif;
+            font-size: 14px;
+            padding: 12px;
+            border-radius: 8px;
+            color: #000;
+            z-index: 10;
+            width: 240px;
+        }
+        #debug h3 {
+            margin: 0 0 8px;
+        }
+        #debug div {
+            margin-bottom: 6px;
+        }
+    </style>
+</head>
+<body>
+<video id="video" width="640" height="480" autoplay muted playsinline></video>
+<canvas id="canvas" width="640" height="480"></canvas>
+<div id="debug">
+    <h3>Cup Debug Info</h3>
+    <div>Cup in View: <span id="inView">No</span></div>
+    <div>Center X: <span id="centerX">-</span></div>
+    <div>Center Y: <span id="centerY">-</span></div>
+    <div>Volume Level (Y): <span id="volume">-</span></div>
+    <div>Panning (X): <span id="pan">-</span></div>
+    <div>Player State: <span id="playerState">Stopped</span></div>
+</div>
+
+<script>
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    // Debug elements
+    const inViewEl = document.getElementById("inView");
+    const centerXEl = document.getElementById("centerX");
+    const centerYEl = document.getElementById("centerY");
+    const volumeEl = document.getElementById("volume");
+    const panEl = document.getElementById("pan");
+    const playerStateEl = document.getElementById("playerState");
+
+    let model;
+    let cupInView = false;
+
+    // Tone.js audio nodes
+    const gainNode = new Tone.Gain(0.5).toDestination();
+    const panNode = new Tone.Panner(0).connect(gainNode);
+    const player = new Tone.Player({
+        url: "audio/drumbeat.mp3", // C major loop
+        loop: true,
+        autostart: false,
+        volume: -6
+    }).connect(panNode);
+
+    async function setupCamera() {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+        return new Promise(resolve => {
+            video.onloadedmetadata = () => resolve(video);
+        });
+    }
+
+    async function loadModel() {
+        model = await cocoSsd.load();
+    }
+
+    function map(value, inMin, inMax, outMin, outMax) {
+        return (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
+    }
+
+    async function detectFrame() {
+        const predictions = await model.detect(video);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        cupInView = false;
+
+        let centerX = "-";
+        let centerY = "-";
+        let normY = "-";
+        let normX = "-";
+
+        for (const pred of predictions) {
+            if (pred.class === "cup" && pred.score > 0.5) {
+                const [x, y, width, height] = pred.bbox;
+                const area = width * height;
+
+                // Filter out cups that are too far (small in size)
+                if (area < 20000) continue;
+
+                cupInView = true;
+                centerX = Math.round(x + width / 2);
+                centerY = Math.round(y + height / 2);
+                normY = map(centerY, 0, video.height, 1, 0); // top = loud
+                normX = map(centerX, 0, video.width, -1, 1); // left to right = -1 to 1
+
+                // Draw box and label
+                ctx.strokeStyle = "blue";
+                ctx.lineWidth = 3;
+                ctx.strokeRect(x, y, width, height);
+                ctx.fillStyle = "white";
+                ctx.fillText("☕ Cup", x, y > 10 ? y - 5 : 10);
+
+                // Apply volume and pan
+                gainNode.gain.rampTo(normY, 0.1);
+                panNode.pan.rampTo(normX, 0.1);
+
+                // Start music if not already playing
+                if (!player.state || player.state === "stopped") {
+                    await Tone.start();
+                    player.start();
+                }
+
+                break; // only track the closest cup
+            }
+        }
+
+        // Stop music if cup disappears
+        if (!cupInView && player.state === "started") {
+            player.stop();
+        }
+
+        // Update debug panel
+        inViewEl.textContent = cupInView ? "Yes" : "No";
+        centerXEl.textContent = centerX;
+        centerYEl.textContent = centerY;
+        volumeEl.textContent = typeof normY === "number" ? normY.toFixed(2) : "-";
+        panEl.textContent = typeof normX === "number" ? normX.toFixed(2) : "-";
+        playerStateEl.textContent = player.state === "started" ? "Playing" : "Stopped";
+
+        requestAnimationFrame(detectFrame);
+    }
+
+    async function init() {
+        await setupCamera();
+        await loadModel();
+        detectFrame();
+    }
+
+    init();
+</script>
+</body>
+</html>

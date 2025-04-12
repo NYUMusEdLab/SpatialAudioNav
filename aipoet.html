@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Poetic Visualizer</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: black;
+            color: white;
+            font-family: sans-serif;
+        }
+        #overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px;
+            border-radius: 8px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .entry {
+            margin-bottom: 20px;
+        }
+        .verse-line {
+            font-style: italic;
+            margin: 5px 0;
+        }
+        .translation {
+            color: #ccc;
+            font-size: 14px;
+        }
+        .image {
+            max-width: 100%;
+            height: auto;
+            margin-top: 10px;
+        }
+        #debug {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            max-width: 40vw;
+            max-height: 30vh;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+<div id="overlay">
+    <label for="poet-select">Choose a Poet:</label>
+    <select id="poet-select">
+        <option value="Li Bai">Li Bai</option>
+        <option value="Du Fu">Du Fu</option>
+        <option value="Wang Wei">Wang Wei</option>
+        <option value="Li Qingzhao">Li Qingzhao</option>
+        <option value="Tao Yuanming">Tao Yuanming</option>
+    </select>
+    <button onclick="startRecognition()">🎤 Start Speaking</button>
+    <div id="entries"></div>
+</div>
+<div id="debug"></div>
+
+<script>
+    const entriesContainer = document.getElementById("entries");
+    const poetSelect = document.getElementById("poet-select");
+    const debugPanel = document.getElementById("debug");
+
+    function logDebug(message) {
+        const now = new Date().toLocaleTimeString();
+        debugPanel.textContent += `\n[${now}] ${message}`;
+        debugPanel.scrollTop = debugPanel.scrollHeight;
+    }
+
+    async function generatePoeticVerse(transcript, poet) {
+        const prompt = `Rewrite the following sentence as a poetic verse in the style of the Chinese poet ${poet}: \"${transcript}\" Return only the poetic line.`;
+        logDebug(`Prompt for verse: ${prompt}`);
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer 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`
+            },
+            body: JSON.stringify({
+                model: "gpt-3.5-turbo",
+                messages: [{ role: "user", content: prompt }],
+                temperature: 0.8
+            })
+        });
+        const data = await response.json();
+        logDebug(`Verse response: ${JSON.stringify(data)}`);
+        return data.choices[0].message.content.trim();
+    }
+
+    async function translateToChinese(text) {
+        const prompt = `Translate the following poetic verse into simplified Mandarin Chinese: \"${text}\"`;
+        logDebug(`Translation prompt: ${prompt}`);
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer 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`
+            },
+            body: JSON.stringify({
+                model: "gpt-3.5-turbo",
+                messages: [{ role: "user", content: prompt }],
+                temperature: 0.5
+            })
+        });
+        const data = await response.json();
+        logDebug(`Translation response: ${JSON.stringify(data)}`);
+        return data.choices[0].message.content.trim();
+    }
+
+    async function generateImage(prompt) {
+        logDebug(`Image prompt: ${prompt}`);
+        const response = await fetch("https://api.openai.com/v1/images/generations", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer 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`
+            },
+            body: JSON.stringify({
+                prompt,
+                n: 1,
+                size: "1024x1024"
+            })
+        });
+        const data = await response.json();
+        logDebug(`Image response URL: ${data.data[0].url}`);
+        return data.data[0].url;
+    }
+
+    async function handleTranscription(transcript) {
+        logDebug(`Transcribed speech: ${transcript}`);
+        const poet = poetSelect.value;
+        const verse = await generatePoeticVerse(transcript, poet);
+        const chinese = await translateToChinese(verse);
+        const imgPrompt = `${verse}, traditional Chinese ink painting style`;
+        const imgUrl = await generateImage(imgPrompt);
+
+        const entry = document.createElement("div");
+        entry.className = "entry";
+
+        const verseLine = document.createElement("div");
+        verseLine.className = "verse-line";
+        verseLine.textContent = verse;
+
+        const translation = document.createElement("div");
+        translation.className = "translation";
+        translation.textContent = chinese;
+
+        const image = document.createElement("img");
+        image.className = "image";
+        image.src = imgUrl;
+        image.alt = verse;
+
+        entry.appendChild(verseLine);
+        entry.appendChild(translation);
+        entry.appendChild(image);
+        entriesContainer.appendChild(entry);
+    }
+
+    function startRecognition() {
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'en-US';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+        recognition.start();
+        logDebug("Speech recognition started.");
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            handleTranscription(transcript);
+        };
+
+        recognition.onerror = (event) => {
+            logDebug("Speech recognition error: " + event.error);
+            alert("Speech recognition error: " + event.error);
+        };
+    }
+</script>
+</body>
+</html>
