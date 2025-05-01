@@ -22,14 +22,7 @@ class AudioVisualizer3D {
         this.dragSensitivity = 0.01; // Sensitivity factor for drag rotation
         this.topdownCanvas = document.getElementById('topdown-canvas');
         this.topdownCtx = this.topdownCanvas ? this.topdownCanvas.getContext('2d') : null;
-        // this.listenerImage = new Image();
-        // this.listenerImage.src = 'images/listener.png';
-        // this.listenerImageLoaded = false;
-        // this.listenerImage.onload = () => {
-        //     this.listenerImageLoaded = true;
-        //     this.updateTopdownView();
-        // };
-        
+
         // Initialize everything
         this.init();
         this.setupJoystick();
@@ -52,8 +45,6 @@ class AudioVisualizer3D {
         const near = 0.1;
         const far = 1000;
         this.camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-        // this.camera.position.set(0, 1.7, 0); // Position at typical human height
-        // NEW MANUAL ADJUSTMENT
         this.camera.position.set(0, 1.7, 0.5); // Position at typical human height
         
         // Create renderer with better quality settings
@@ -124,7 +115,7 @@ class AudioVisualizer3D {
         this.scene.add(floor);
         
         // Add grid to help with spatial orientation
-        const gridHelper = new THREE.GridHelper(floorSize, floorSize/2, 0x444444, 0x222222);
+        const gridHelper = new THREE.GridHelper(floorSize, floorSize / 2, 0x444444, 0x222222);
         gridHelper.position.y = -0.09;
         this.scene.add(gridHelper);
         
@@ -143,6 +134,163 @@ class AudioVisualizer3D {
         ring.rotation.x = -Math.PI / 2;
         ring.position.y = -0.08;
         this.scene.add(ring);
+
+        // Add text panels to the environment walls
+        this.addTextPanels();
+    }
+
+    // Helper function to create text panels
+    createTextPanel(text, position, rotationY, width = 4, height = 2) {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        const canvasWidth = 1024; // Texture resolution width
+        const canvasHeight = 512; // Texture resolution height
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+
+        // Panel background
+        context.fillStyle = 'rgba(30, 30, 30, 0.7)'; // Semi-transparent dark background
+        context.fillRect(0, 0, canvasWidth, canvasHeight);
+        context.strokeStyle = '#e69138'; // Orange border
+        context.lineWidth = 15;
+        context.strokeRect(0, 0, canvasWidth, canvasHeight);
+
+        // Text properties
+        context.fillStyle = '#f0f0f0'; // Light text color
+        context.font = 'bold 48px Arial';
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+
+        // Simple text wrapping (basic)
+        const words = text.split(' ');
+        let line = '';
+        const lines = [];
+        const maxWidth = canvasWidth * 0.9; // Max width for text
+        const lineHeight = 60;
+
+        for (let n = 0; n < words.length; n++) {
+            const testLine = line + words[n] + ' ';
+            const metrics = context.measureText(testLine);
+            const testWidth = metrics.width;
+            if (testWidth > maxWidth && n > 0) {
+                lines.push(line);
+                line = words[n] + ' ';
+            } else {
+                line = testLine;
+            }
+        }
+        lines.push(line);
+
+        // Draw wrapped text
+        const startY = (canvasHeight - (lines.length - 1) * lineHeight) / 2;
+        for (let i = 0; i < lines.length; i++) {
+            context.fillText(lines[i].trim(), canvasWidth / 2, startY + i * lineHeight);
+        }
+
+        // Create texture and material
+        const texture = new THREE.CanvasTexture(canvas);
+        const material = new THREE.MeshBasicMaterial({
+            map: texture,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.9 // Slightly transparent panel
+        });
+
+        // Create plane geometry
+        const geometry = new THREE.PlaneGeometry(width, height);
+        const panel = new THREE.Mesh(geometry, material);
+
+        // Set position and rotation
+        panel.position.copy(position);
+        panel.rotation.y = rotationY;
+
+        this.scene.add(panel);
+        return panel;
+    }
+
+    // Helper function to create title panels (no border/background)
+    createTitlePanel(title, subtitle, position, rotationY, width = 6, height = 3) {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        const canvasWidth = 1024; // Texture resolution width
+        const canvasHeight = 512; // Texture resolution height
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+
+        // Transparent background
+        context.fillStyle = 'rgba(0, 0, 0, 0)';
+        context.fillRect(0, 0, canvasWidth, canvasHeight);
+
+        // Title Text properties
+        context.fillStyle = '#f0f0f0'; // Light text color
+        context.font = 'bold 96px Arial'; // Larger, bold font for title
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.fillText(title, canvasWidth / 2, canvasHeight / 2 - 40); // Position title slightly above center
+
+        // Subtitle Text properties
+        context.font = 'italic 48px Arial'; // Smaller, italic font for subtitle
+        context.fillStyle = '#cccccc'; // Slightly dimmer color for subtitle
+        context.fillText(subtitle, canvasWidth / 2, canvasHeight / 2 + 60); // Position subtitle below title
+
+        // Create texture and material
+        const texture = new THREE.CanvasTexture(canvas);
+        const material = new THREE.MeshBasicMaterial({
+            map: texture,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 1 // Fully opaque text on transparent background
+        });
+
+        // Create plane geometry
+        const geometry = new THREE.PlaneGeometry(width, height);
+        const panel = new THREE.Mesh(geometry, material);
+
+        // Set position and rotation
+        panel.position.copy(position);
+        panel.rotation.y = rotationY;
+
+        this.scene.add(panel);
+        return panel;
+    }
+
+    addTextPanels() {
+        const panelRadius = 12; // Distance from center for the panels
+        const panelHeight = 2.5; // Height of the panels from the floor
+        const panelWidth = 6; // Use the larger width for all panels for consistency
+        const panelHeightDim = 3; // Use the larger height for all panels for consistency
+        const titlePanelIndex = 3; // Index corresponding to the space between speakers 1 and 2 (180 degrees)
+
+        const texts = [
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+            "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+            "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.",
+            "TITLE_PLACEHOLDER", // Placeholder for the title panel
+            "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam.",
+            "Eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo."
+        ];
+
+        const titleText = "Spatial Visualization";
+        const subtitleText = "A 3D experience for the Boulez l'ombre double";
+
+        const numPanels = texts.length;
+        for (let i = 0; i < numPanels; i++) {
+            const angle = (i / numPanels) * Math.PI * 2; // Distribute panels evenly
+            const x = panelRadius * Math.sin(angle);
+            const z = panelRadius * Math.cos(angle);
+            const position = new THREE.Vector3(x, panelHeight, z);
+
+            // Calculate rotation to face the center (0, panelHeight, 0)
+            const rotationY = Math.atan2(x, z) + Math.PI; // Add PI to face inwards
+
+            if (i === titlePanelIndex) {
+                // Create the title panel
+                this.createTitlePanel(titleText, subtitleText, position, rotationY, 8, 4);
+            } else {
+                // Create a regular text panel
+                this.createTextPanel(texts[i], position, rotationY, panelWidth, panelHeightDim);
+            }
+        }
     }
 
     createSpeakers() {
@@ -260,7 +408,7 @@ class AudioVisualizer3D {
             color: 0xf0f0f0,
             roughness: 0.6,
             transparent: true,
-            opacity: 0.1  // 20% opacity as requested
+            opacity: 0.0314  // 20% opacity as requested
         });
         const head = new THREE.Mesh(headGeometry, headMaterial);
         head.position.y = 1.7;
@@ -274,7 +422,7 @@ class AudioVisualizer3D {
             color: 0x3366cc,
             roughness: 0.7,
             transparent: true,
-            opacity: 0.2  // 20% opacity as requested
+            opacity: 0.0314  // 20% opacity as requested
         });
         const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
         body.position.y = 1.3;
@@ -287,7 +435,7 @@ class AudioVisualizer3D {
         const earMaterial = new THREE.MeshStandardMaterial({ 
             color: 0xf0f0f0,
             transparent: true,
-            opacity: 0.2  // 20% opacity as requested
+            opacity: 0.0314  // 20% opacity as requested
         });
         
         const leftEar = new THREE.Mesh(earGeometry, earMaterial);
@@ -303,7 +451,7 @@ class AudioVisualizer3D {
         const noseMaterial = new THREE.MeshStandardMaterial({ 
             color: 0xff6666,
             transparent: true,
-            opacity: 0.2  // 20% opacity as requested
+            opacity: 0.0314  // 20% opacity as requested
         });
         const nose = new THREE.Mesh(noseGeometry, noseMaterial);
         nose.position.set(0, 1.7, 0.25);
@@ -733,30 +881,6 @@ class AudioVisualizer3D {
         
         // Draw listener using the image
         if (this.listenerImageLoaded) {
-            // // Save the current state
-            // ctx.save();
-            
-            // // Move to the center position
-            // ctx.translate(centerX, centerY);
-            
-            // // Rotate the canvas based on the current rotation angle
-            // ctx.rotate(this.rotationAngle);
-            
-            // // Calculate the size for the listener image (approximately 1/8 of the view size)
-            // const imageSize = Math.min(width, height) / 8;
-            
-            // // Draw the image centered at the origin (which is now at centerX, centerY)
-            // ctx.drawImage(
-            //     this.listenerImage, 
-            //     -imageSize / 2,  // x position (half image width to the left)
-            //     -imageSize / 2,  // y position (half image height up)
-            //     imageSize,       // width
-            //     imageSize        // height
-            // );
-            
-            // // Restore the canvas state
-            // ctx.restore();
-        } else {
             // Fallback if image isn't loaded yet
             ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
             ctx.beginPath();
