@@ -12,21 +12,101 @@
     <div id="immersive-container">
         <div id="scene-container"></div>
         <div id="joystick-container"></div>
+        
+        <!-- Mode Selection UI -->
+        <div class="mode-selector">
+            <div class="mode-label">Mode:</div>
+            <div class="mode-options">
+                <button class="mode-btn active" data-mode="engineer">Audio Engineer</button>
+                <button class="mode-btn" data-mode="audience">Audience</button>
+                <button class="mode-btn" data-mode="performer">Performer</button>
+            </div>
+        </div>
+        
+        <!-- Mix Mode Toggle -->
+        <div class="mix-mode-toggle">
+            <span>Listen</span>
+            <label class="switch">
+                <input type="checkbox" id="mixModeToggle">
+                <span class="slider round"></span>
+            </label>
+            <span>Mix</span>
+        </div>
+        
+        <!-- Scene Selection -->
+        <div class="scene-selector">
+            <button class="scene-btn active" data-scene="default">Default</button>
+            <button class="scene-btn" data-scene="transition1-2">Transition 1-2</button>
+            <button class="scene-btn" data-scene="transition3-4">Transition 3-4</button>
+            <button class="scene-btn" data-scene="stropheV">Strophe V</button>
+        </div>
+        
         <div class="topdown-view">
             <div class="view-label">2D View</div>
             <canvas id="topdown-canvas"></canvas>
         </div>
+        
         <div class="audio-controls">
             <button id="playPauseButton" data-playing="false" title="Play/Pause Audio"></button>
             <button id="resetButton" title="Reset to Beginning"></button>
         </div>
+        
+        <!-- Trivia Button -->
+        <button id="triviaButton" title="Show Information">i</button>
+        
+        <!-- Trivia Pop-up Container -->
+        <div class="trivia-container" style="display: none;">
+            <div class="trivia-header">
+                <h2>About the Piece</h2>
+                <button class="close-trivia">&times;</button>
+            </div>
+            <div class="trivia-content">
+                <!-- Trivia content will be loaded dynamically -->
+            </div>
+            <div class="trivia-navigation">
+                <button class="trivia-nav" data-section="composer">Composer</button>
+                <button class="trivia-nav" data-section="piece">The Piece</button>
+                <button class="trivia-nav" data-section="technique">Technique</button>
+                <button class="trivia-nav" data-section="history">History</button>
+            </div>
+        </div>
+        
+        <!-- Contour Display Toggle -->
+        <!-- <div class="toggle-contour-view">
+            <button data-view="contour" class="active">Contour</button>
+            <button data-view="notation">Notation</button>
+        </div> -->
+        
+        <!-- Contour/Notation Display Container
+        <div class="music-visualization-container">
+            <div class="contour-display active">
+                <!-- Contour visualization will be drawn here -->
+                <!-- <canvas id="contour-canvas"></canvas>
+            </div>
+            <div class="notation-display">
+                <!-- Notation images will be displayed here -->
+                <!-- <div class="notation-scroll"> -->
+                    <!-- Notation images will be added dynamically -->
+                <!-- </div> -->
+            <!-- </div> -->
+        <!-- </div> --> 
+
+        <!-- Arabic Visualization Container -->
+        <div id="arabic-visualization-container">
+            <img id="arabic-visualization-image" src="images/ArabicVisualization.png" alt="Arabic Music Visualization">
+            <div id="arabic-playhead"></div>
+        </div>
     </div>
     
-    <!-- Audio element with explicit crossorigin attribute -->
+    <!-- Audio elements -->
     <audio id="double" src="audio/double-clarinet-si.mp3" preload="auto" crossorigin="anonymous"></audio>
+    <audio id="transition1-2" src="audio/double-clarinet-si.mp3" preload="auto" crossorigin="anonymous"></audio>
+    <audio id="transition3-4" src="audio/double-clarinet-si.mp3" preload="auto" crossorigin="anonymous"></audio>
+    <audio id="stropheV" src="audio/double-clarinet-si.mp3" preload="auto" crossorigin="anonymous"></audio>
     
     <script type="module" src="js/3DVisualization.js"></script>
     <script type="module" src="js/AudioVisualizer.js"></script>
-    <script src="script.js"></script> <!-- Removed type="module" for direct access -->
+    <script src="js/TriviaSections.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>

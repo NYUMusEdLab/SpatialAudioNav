@@ -22,13 +22,13 @@ class AudioVisualizer3D {
         this.dragSensitivity = 0.01; // Sensitivity factor for drag rotation
         this.topdownCanvas = document.getElementById('topdown-canvas');
         this.topdownCtx = this.topdownCanvas ? this.topdownCanvas.getContext('2d') : null;
-        this.listenerImage = new Image();
-        this.listenerImage.src = 'images/listener.png';
-        this.listenerImageLoaded = false;
-        this.listenerImage.onload = () => {
-            this.listenerImageLoaded = true;
-            this.updateTopdownView();
-        };
+        // this.listenerImage = new Image();
+        // this.listenerImage.src = 'images/listener.png';
+        // this.listenerImageLoaded = false;
+        // this.listenerImage.onload = () => {
+        //     this.listenerImageLoaded = true;
+        //     this.updateTopdownView();
+        // };
         
         // Initialize everything
         this.init();
@@ -52,7 +52,9 @@ class AudioVisualizer3D {
         const near = 0.1;
         const far = 1000;
         this.camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-        this.camera.position.set(0, 1.7, 0); // Position at typical human height
+        // this.camera.position.set(0, 1.7, 0); // Position at typical human height
+        // NEW MANUAL ADJUSTMENT
+        this.camera.position.set(0, 1.7, 0.5); // Position at typical human height
         
         // Create renderer with better quality settings
         this.renderer = new THREE.WebGLRenderer({ 
@@ -258,7 +260,7 @@ class AudioVisualizer3D {
             color: 0xf0f0f0,
             roughness: 0.6,
             transparent: true,
-            opacity: 0.2  // 20% opacity as requested
+            opacity: 0.1  // 20% opacity as requested
         });
         const head = new THREE.Mesh(headGeometry, headMaterial);
         head.position.y = 1.7;
@@ -731,29 +733,29 @@ class AudioVisualizer3D {
         
         // Draw listener using the image
         if (this.listenerImageLoaded) {
-            // Save the current state
-            ctx.save();
+            // // Save the current state
+            // ctx.save();
             
-            // Move to the center position
-            ctx.translate(centerX, centerY);
+            // // Move to the center position
+            // ctx.translate(centerX, centerY);
             
-            // Rotate the canvas based on the current rotation angle
-            ctx.rotate(this.rotationAngle);
+            // // Rotate the canvas based on the current rotation angle
+            // ctx.rotate(this.rotationAngle);
             
-            // Calculate the size for the listener image (approximately 1/8 of the view size)
-            const imageSize = Math.min(width, height) / 8;
+            // // Calculate the size for the listener image (approximately 1/8 of the view size)
+            // const imageSize = Math.min(width, height) / 8;
             
-            // Draw the image centered at the origin (which is now at centerX, centerY)
-            ctx.drawImage(
-                this.listenerImage, 
-                -imageSize / 2,  // x position (half image width to the left)
-                -imageSize / 2,  // y position (half image height up)
-                imageSize,       // width
-                imageSize        // height
-            );
+            // // Draw the image centered at the origin (which is now at centerX, centerY)
+            // ctx.drawImage(
+            //     this.listenerImage, 
+            //     -imageSize / 2,  // x position (half image width to the left)
+            //     -imageSize / 2,  // y position (half image height up)
+            //     imageSize,       // width
+            //     imageSize        // height
+            // );
             
-            // Restore the canvas state
-            ctx.restore();
+            // // Restore the canvas state
+            // ctx.restore();
         } else {
             // Fallback if image isn't loaded yet
             ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';

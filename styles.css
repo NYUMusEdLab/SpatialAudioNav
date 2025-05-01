@@ -33,6 +33,154 @@ body, html {
     height: 100%;
 }
 
+/* Mode Selector */
+.mode-selector {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 10px;
+    padding: 10px;
+    z-index: 110;
+    border: 1px solid #e69138;
+    box-shadow: 0 0 15px rgba(230, 145, 56, 0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mode-label {
+    font-size: 14px;
+    color: #e69138;
+    margin-bottom: 5px;
+    text-align: center;
+}
+
+.mode-options {
+    display: flex;
+    gap: 5px;
+}
+
+.mode-btn {
+    padding: 5px 10px;
+    background-color: rgba(50, 50, 50, 0.7);
+    border: 1px solid #777;
+    border-radius: 5px;
+    color: #ddd;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+.mode-btn.active {
+    background-color: #e69138;
+    color: #000;
+    border-color: #e69138;
+    box-shadow: 0 0 10px rgba(230, 145, 56, 0.8);
+}
+
+/* Mix Mode Toggle */
+.mix-mode-toggle {
+    position: absolute;
+    top: 85px;
+    left: 20px;
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 10px;
+    padding: 10px;
+    z-index: 110;
+    border: 1px solid #e69138;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 0 15px rgba(230, 145, 56, 0.5);
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 45px;
+    height: 24px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #555;
+    transition: .4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+}
+
+input:checked + .slider {
+    background-color: #e69138;
+}
+
+input:checked + .slider:before {
+    transform: translateX(21px);
+}
+
+.slider.round {
+    border-radius: 24px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
+/* Scene Selector */
+.scene-selector {
+    position: absolute;
+    top: 140px;
+    left: 20px;
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 10px;
+    padding: 10px;
+    z-index: 110;
+    border: 1px solid #e69138;
+    box-shadow: 0 0 15px rgba(230, 145, 56, 0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.scene-btn {
+    padding: 8px 12px;
+    background-color: rgba(50, 50, 50, 0.7);
+    border: 1px solid #777;
+    border-radius: 5px;
+    color: #ddd;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+    text-align: left;
+}
+
+.scene-btn.active {
+    background-color: #e69138;
+    color: #000;
+    border-color: #e69138;
+    box-shadow: 0 0 10px rgba(230, 145, 56, 0.8);
+}
+
 /* Joystick styles */
 #joystick-container {
     position: absolute;
@@ -158,7 +306,7 @@ body, html {
     z-index: 10;
 }
 
-/* 2D Top-down visualization - make it larger and more prominent */
+/* 2D Top-down visualization */
 .topdown-view {
     position: absolute;
     top: 50px;
@@ -191,105 +339,290 @@ body, html {
     border-radius: 5px;
 }
 
-/* Sheet Music Display */
-.sheet-music-container {
+/* Trivia Button and Container */
+#triviaButton {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid #e69138;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: #e69138;
+    font-size: 20px;
+    font-weight: bold;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    z-index: 110;
+    box-shadow: 0 0 15px rgba(230, 145, 56, 0.5);
+    font-style: italic;
+    transition: all 0.2s;
+}
+
+#triviaButton:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 20px rgba(230, 145, 56, 0.8);
+}
+
+.trivia-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    max-width: 700px;
+    height: 80%;
+    max-height: 600px;
+    background-color: rgba(0, 0, 0, 0.9);
+    border: 2px solid #e69138;
+    border-radius: 15px;
+    z-index: 1000;
+    box-shadow: 0 0 30px rgba(230, 145, 56, 0.7);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.trivia-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background-color: rgba(230, 145, 56, 0.2);
+    border-bottom: 1px solid #e69138;
+}
+
+.trivia-header h2 {
+    color: #e69138;
+    font-size: 24px;
+}
+
+.close-trivia {
+    background: none;
+    border: none;
+    color: #e69138;
+    font-size: 28px;
+    cursor: pointer;
+    padding: 0 10px;
+    transition: all 0.2s;
+}
+
+.close-trivia:hover {
+    transform: scale(1.2);
+    color: #ff9d45;
+}
+
+.trivia-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    line-height: 1.6;
+}
+
+.trivia-content h3 {
+    color: #e69138;
+    margin-bottom: 15px;
+}
+
+.trivia-content p {
+    margin-bottom: 15px;
+}
+
+.trivia-content img {
+    max-width: 100%;
+    border-radius: 8px;
+    margin: 15px 0;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.6);
+}
+
+.trivia-navigation {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    padding: 15px;
+    background-color: rgba(230, 145, 56, 0.1);
+    border-top: 1px solid #e69138;
+}
+
+.trivia-nav {
+    padding: 8px 15px;
+    background-color: rgba(50, 50, 50, 0.7);
+    border: 1px solid #777;
+    border-radius: 5px;
+    color: #e69138;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.trivia-nav:hover, .trivia-nav.active {
+    background-color: #e69138;
+    color: #000;
+    border-color: #e69138;
+}
+
+/* Contour View Toggle */
+.toggle-contour-view {
+    position: absolute;
+    bottom: 210px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 8px;
+    border: 1px solid #e69138;
+    overflow: hidden;
+    z-index: 110;
+    box-shadow: 0 0 15px rgba(230, 145, 56, 0.5);
+}
+
+.toggle-contour-view button {
+    padding: 8px 15px;
+    background-color: transparent;
+    border: none;
+    color: #e69138;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.toggle-contour-view button.active {
+    background-color: #e69138;
+    color: #000;
+}
+
+/* Music Visualization Container */
+.music-visualization-container {
     position: absolute;
     bottom: 0;
     left: 0;
     width: 100%;
-    height: 150px; /* Height of the sheet music container */
+    height: 200px;
     background-color: rgba(0, 0, 0, 0.7);
     border-top: 1px solid #e69138;
-    box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.5);
-    z-index: 90;
-    overflow: hidden;
-    transition: height 0.3s ease;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+    z-index: 100;
 }
 
-.sheet-music-scroll {
+/* Arabic Visualization Container */
+#arabic-visualization-container {
+    position: absolute;
+    bottom: 50px; /* Changed from 0 to 50px */
+    left: 50%; /* Center horizontally */
+    transform: translateX(-50%); /* Adjust for centering */
+    width: 90%; /* Adjust width as needed, or use max-width */
+    max-width: 1200px; /* Example max-width, adjust as needed */
+    height: 100px; /* Adjust height as needed */
+    background-color: rgba(0, 0, 0, 0.8); /* Optional background */
+    border: 2px solid #e69138; /* Orange outline */
+    border-radius: 10px; /* Corner radius */
+    overflow: hidden; /* Hide overflow and constrain playhead visually */
+    z-index: 105; /* Ensure it's above other bottom elements if necessary */
+}
+
+#arabic-visualization-image {
+    display: block;
     width: 100%;
     height: 100%;
+    object-fit: contain; /* Or 'cover', depending on desired scaling */
+}
+
+#arabic-playhead {
+    position: absolute;
+    top: 0;
+    left: 0; /* Initial position, JS will update based on percentage */
+    width: 3px; /* Width of the vertical bar */
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.7); /* Translucent white */
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+    pointer-events: none; /* Prevent interaction */
+    z-index: 106; /* Above the image */
+}
+
+.contour-display, .notation-display {
+    width: 100%;
+    height: 100%;
+    display: none;
+}
+
+.contour-display.active, .notation-display.active {
+    display: block;
+}
+
+#contour-canvas {
+    width: 100%;
+    height: 100%;
+}
+
+.notation-scroll {
+    width: 100%;
+    height: 100%;
+    display: flex;
     overflow-x: auto;
     overflow-y: hidden;
-    white-space: nowrap;
     padding: 10px 0;
-    display: flex;
     align-items: center;
 }
 
-.sheet-music-image {
-    height: calc(100% - 20px); /* Adjust for padding */
-    max-height: 130px;
-    object-fit: contain;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+.notation-image {
+    height: 180px;
+    margin: 0 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
 }
 
-/* Scrollbar styling for the sheet music */
-.sheet-music-scroll::-webkit-scrollbar {
-    height: 8px;
-}
-
-.sheet-music-scroll::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 4px;
-}
-
-.sheet-music-scroll::-webkit-scrollbar-thumb {
-    background: #e69138;
-    border-radius: 4px;
-}
-
-.sheet-music-scroll::-webkit-scrollbar-thumb:hover {
-    background: #ff9d45;
-}
-
-/* Toggle button for sheet music */
-.toggle-sheet-music {
+/* Performer Mode Specific Styles */
+.performer-view {
+    display: none;
     position: absolute;
-    bottom: 150px; /* Updated to sit directly above sheet music */
+    bottom: 210px;
     left: 50%;
     transform: translateX(-50%);
-    width: 100px;
-    height: 20px;
-    background-color: rgba(0, 0, 0, 0.6);
+    width: 80%;
+    height: 100px;
+    background-color: rgba(0, 0, 0, 0.7);
     border: 1px solid #e69138;
-    border-bottom: none;
-    border-radius: 10px 10px 0 0;
+    border-radius: 10px;
+    padding: 10px;
+    box-shadow: 0 0 15px rgba(230, 145, 56, 0.5);
+}
+
+.performer-view.active {
+    display: block;
+}
+
+.performer-cue {
     color: #e69138;
-    font-size: 12px;
+    font-size: 24px;
     text-align: center;
-    cursor: pointer;
-    z-index: 91;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    margin-top: 20px;
 }
 
-/* Enhanced Piano Tiles Visualization */
-@keyframes tileGlow {
-    0% { box-shadow: 0 0 8px rgba(255, 149, 0, 0.6); }
-    50% { box-shadow: 0 0 16px rgba(255, 149, 0, 1.0); }
-    100% { box-shadow: 0 0 8px rgba(255, 149, 0, 0.6); }
-}
-
-@keyframes tilePulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); }
-}
-
-.piano-tile {
-    animation: tileGlow 1.5s infinite, tilePulse 1.5s infinite;
-}
-
-@keyframes fadeInOut {
-    0% { opacity: 0; transform: translateY(-20px); }
-    100% { opacity: 1; transform: translateY(0); }
-}
-
-/* For mobile devices */
+/* Mobile Optimization */
 @media (max-width: 768px) {
+    .mode-selector, .mix-mode-toggle, .scene-selector {
+        left: 10px;
+        padding: 5px;
+    }
+    
+    .mode-selector {
+        top: 10px;
+    }
+    
+    .mix-mode-toggle {
+        top: 65px;
+    }
+    
+    .scene-selector {
+        top: 110px;
+    }
+    
+    .mode-btn, .scene-btn {
+        padding: 4px 8px;
+        font-size: 11px;
+    }
+    
     #joystick-container {
         bottom: 220px;
         right: 30px;
@@ -311,14 +644,47 @@ body, html {
         width: 160px;
         height: 160px;
         top: 60px;
-        right: 20px;
-    }
-
-    .sheet-music-container {
-        height: 100px; /* Smaller height on mobile */
+        right: 10px;
     }
     
-    .toggle-sheet-music {
-        bottom: 100px; /* Adjust for smaller sheet music height */
+    #triviaButton {
+        top: 10px;
+        right: 10px;
+        width: 30px;
+        height: 30px;
+        font-size: 16px;
+    }
+    
+    .music-visualization-container {
+        height: 150px;
+    }
+    
+    .trivia-container {
+        width: 95%;
+        height: 90%;
+    }
+    
+    .toggle-contour-view {
+        bottom: 160px;
+    }
+    
+    .performer-view {
+        bottom: 160px;
+        height: 80px;
+    }
+    
+    .performer-cue {
+        font-size: 20px;
+        margin-top: 10px;
+    }
+    
+    #arabic-visualization-container {
+        width: 95%; /* Adjust width for smaller screens */
+        height: 80px; /* Adjust height for smaller screens */
+        bottom: 30px; /* Adjust bottom position for mobile */
+    }
+
+    .notation-image {
+        height: 130px;
     }
 }

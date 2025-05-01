@@ -1,5 +1,5 @@
 /**
- * Simplified Spatial Audio Implementation - Chrome Compatible Version
+ * Enhanced Spatial Audio Implementation
  */
 
 // Create variables to hold audio components (initialized on user interaction)
@@ -13,35 +13,100 @@ let audioInitialized = false;
 // Set constants for audio positioning
 const posX = 0, posY = 1.7, posZ = 0;
 
-// Get the audio element first
-const audioElement = document.getElementById("double");
-if (!audioElement) {
-    console.error("Audio element with ID 'double' not found!");
-}
+// Application states
+let currentMode = 'engineer'; // engineer, audience, performer
+let currentScene = 'default'; // default, transition1-2, transition3-4, stropheV
+let isMixingMode = false; // Listen mode (false) or Mix mode (true)
 
-// Audio timestamps and patterns (unchanged)
-const timestamps = [
-    0, 1.483, 3.311, 4.59, 7.863, 11.365, 17.314, 18.926, 23.75, 
-    31.035, 33.334, 36.547, 37.723, 40.114, 41.014, 42.203, 43.957, 
-    45.172, 45.783, 47.39, 48.731, 50.323, 52.462, 55.005, 59.489, 
-    63.377, 68.79
-];
+// Audio effects for special scenes
+let circularPanner = null;
+let accelerationFactor = 1.0;
+let resonator = null;
+let dryWetMixer = null;
+let wetGain = null;
+let dryGain = null;
 
-const presets = [
-    [1, 0, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 1, 0],
-    [0, 1, 0, 0, 0, 0], [0, 0, 0, 0, 1, 0], [0, 0, 0, 1, 0, 0],
-    [0, 0, 0, 0, 0, 1], [0, 0, 1, 0, 0, 0], [0, 0, 1, 0, 0, 1],
-    [0, 1, 0, 0, 1, 0], [0, 1, 0, 1, 0, 0], [1, 0, 0, 0, 0, 1],
-    [1, 1, 0, 0, 0, 0], [0, 0, 0, 1, 1, 0], [0, 0, 1, 0, 0, 1],
-    [0, 1, 1, 0, 0, 0], [0, 1, 1, 1, 0, 0], [0, 1, 0, 1, 1, 0],
-    [1, 1, 0, 0, 1, 0], [1, 0, 0, 0, 1, 1], [0, 0, 0, 0, 0, 1],
-    [0, 0, 0, 1, 0, 1], [1, 0, 0, 1, 0, 1], [1, 0, 1, 1, 0, 1],
-    [1, 1, 1, 1, 0, 1], [1, 1, 1, 1, 1, 1], [0, 0, 0, 0, 0, 0]
-];
+// Audio elements
+let audioElements = {};
+let currentAudioElement = null;
 
-// Make timestamps and presets available globally
-window.timestamps = timestamps;
-window.presets = presets;
+// Animation frames
+let animationFrameId = null;
+
+// Get the audio elements after DOM load
+document.addEventListener('DOMContentLoaded', () => {
+    audioElements = {
+        'default': document.getElementById("double"),
+        'transition1-2': document.getElementById("transition1-2"),
+        'transition3-4': document.getElementById("transition3-4"),
+        'stropheV': document.getElementById("stropheV")
+    };
+    
+    currentAudioElement = audioElements['default'];
+    window.audioElement = currentAudioElement;
+});
+
+// Audio timestamps and patterns
+const timestampPatterns = {
+    default: {
+        timestamps: [
+            0, 1.483, 3.311, 4.59, 7.863, 11.365, 17.314, 18.926, 23.75, 
+            31.035, 33.334, 36.547, 37.723, 40.114, 41.014, 42.203, 43.957, 
+            45.172, 45.783, 47.39, 48.731, 50.323, 52.462, 55.005, 59.489, 
+            63.377, 68.79
+        ],
+        patterns: [
+            [1, 0, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 1, 0],
+            [0, 1, 0, 0, 0, 0], [0, 0, 0, 0, 1, 0], [0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 1], [0, 0, 1, 0, 0, 0], [0, 0, 1, 0, 0, 1],
+            [0, 1, 0, 0, 1, 0], [0, 1, 0, 1, 0, 0], [1, 0, 0, 0, 0, 1],
+            [1, 1, 0, 0, 0, 0], [0, 0, 0, 1, 1, 0], [0, 0, 1, 0, 0, 1],
+            [0, 1, 1, 0, 0, 0], [0, 1, 1, 1, 0, 0], [0, 1, 0, 1, 1, 0],
+            [1, 1, 0, 0, 1, 0], [1, 0, 0, 0, 1, 1], [0, 0, 0, 0, 0, 1],
+            [0, 0, 0, 1, 0, 1], [1, 0, 0, 1, 0, 1], [1, 0, 1, 1, 0, 1],
+            [1, 1, 1, 1, 0, 1], [1, 1, 1, 1, 1, 1], [0, 0, 0, 0, 0, 0]
+        ]
+    },
+    "transition1-2": {
+        timestamps: [0, 1.2, 2.4, 3.6, 4.8, 6.0, 7.2, 8.4, 9.6, 10.8],
+        patterns: [
+            [1, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0],
+            [0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1, 0], [0, 1, 0, 1, 0, 0], [0, 0, 1, 0, 0, 1],
+            [1, 1, 1, 1, 1, 1]
+        ]
+    },
+    "transition3-4": {
+        timestamps: [0, 0.8, 1.6, 2.4, 3.2, 4.0, 4.8, 5.6, 6.4, 7.2],
+        // Special rotating pattern handled by circular panner
+        patterns: [
+            [1, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0],
+            [0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 1],
+            [1, 1, 0, 0, 0, 0], [0, 0, 1, 1, 0, 0], [0, 0, 0, 0, 1, 1],
+            [1, 1, 1, 1, 1, 1]
+        ]
+    },
+    "stropheV": {
+        timestamps: [0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0],
+        patterns: [
+            [1, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0],
+            [0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 1, 0, 0], [0, 1, 0, 0, 1, 0], [0, 0, 1, 0, 0, 1],
+            [1, 1, 1, 1, 1, 1]
+        ]
+    }
+};
+
+// Make current timestamps and patterns available globally
+window.timestamps = timestampPatterns.default.timestamps;
+window.presets = timestampPatterns.default.patterns;
+
+// Mode-specific positions
+const modePositions = {
+    engineer: { x: 0, y: 1.7, z: 0 }, // Center of the room
+    audience: { x: 0, y: 1.7, z: 2 },  // Back of the room
+    performer: { x: 0, y: 1.7, z: -2 } // Front of the room
+};
 
 // Pattern switching variables
 let patternInterval = null;
@@ -50,9 +115,13 @@ let currentPatternIndex = 0;
 // UI Controls
 const playPauseButton = document.getElementById('playPauseButton');
 const resetButton = document.getElementById('resetButton');
+const arabicPlayhead = document.getElementById('arabic-playhead'); // Get the new playhead element
+const arabicContainer = document.getElementById('arabic-visualization-container'); // Get the container
 
 if (!playPauseButton) console.error("Play/Pause button not found!");
 if (!resetButton) console.error("Reset button not found!");
+if (!arabicPlayhead) console.error("Arabic playhead element not found!");
+if (!arabicContainer) console.error("Arabic visualization container not found!");
 
 // Use a simple flag to track initialization attempts
 let initializationAttempted = false;
@@ -78,17 +147,8 @@ function initAudioContext() {
             audioCtx.destination.channelCountMode = "explicit";
             audioCtx.destination.channelInterpretation = "speakers";
             
-            // Set listener position and orientation
-            const listener = audioCtx.listener;
-            listener.positionX.value = posX;
-            listener.positionY.value = posY;
-            listener.positionZ.value = posZ;
-            listener.forwardX.value = 0;
-            listener.forwardY.value = 0;
-            listener.forwardZ.value = -1;
-            listener.upX.value = 0;
-            listener.upY.value = 1;
-            listener.upZ.value = 0;
+            // Set listener position and orientation based on mode
+            updateListenerPosition();
             
             console.log("Audio Context created. Setting up Web Audio...");
             
@@ -109,17 +169,58 @@ function initAudioContext() {
     });
 }
 
+// Update listener position based on current mode
+function updateListenerPosition() {
+    if (!audioCtx || !audioCtx.listener) return;
+    
+    const position = modePositions[currentMode];
+    
+    // Set listener position
+    const listener = audioCtx.listener;
+    if (listener.positionX) {
+        // Modern API
+        listener.positionX.value = position.x;
+        listener.positionY.value = position.y;
+        listener.positionZ.value = position.z;
+    } else {
+        // Fallback for older browsers
+        listener.setPosition(position.x, position.y, position.z);
+    }
+    
+    // Set forward orientation based on mode
+    let forwardX = 0, forwardY = 0, forwardZ = -1;
+    
+    if (currentMode === 'audience') {
+        forwardZ = -1; // facing forward
+    } else if (currentMode === 'performer') {
+        forwardZ = 1; // facing the audience
+    }
+    
+    if (listener.forwardX) {
+        // Modern API
+        listener.forwardX.value = forwardX;
+        listener.forwardY.value = forwardY;
+        listener.forwardZ.value = forwardZ;
+        listener.upX.value = 0;
+        listener.upY.value = 1;
+        listener.upZ.value = 0;
+    } else {
+        // Fallback
+        listener.setOrientation(forwardX, forwardY, forwardZ, 0, 1, 0);
+    }
+}
+
 // Function to set up all the Web Audio connections
 function setupWebAudio() {
     return new Promise((resolve, reject) => {
-        if (!audioCtx || !audioElement) {
+        if (!audioCtx || !currentAudioElement) {
             reject(new Error("Missing AudioContext or audio element"));
             return;
         }
         
         // Create audio source from element
         try {
-            audioSource = audioCtx.createMediaElementSource(audioElement);
+            audioSource = audioCtx.createMediaElementSource(currentAudioElement);
         } catch (e) {
             console.error("Error creating media element source:", e);
             
@@ -160,16 +261,17 @@ function setupWebAudio() {
             window.gainNodes = gainNodes;
             masterGain = new GainNode(audioCtx, { gain: 0.8 });
             
-            // Connect everything together
-            panners.forEach((panner, index) => {
-                audioSource.connect(panner);
-                panner.connect(gainNodes[index]);
-                gainNodes[index].connect(masterGain);
-            });
+            // Create circular panner for Transition 3-4
+            setupCircularPanner();
             
-            masterGain.connect(audioCtx.destination);
+            // Create resonator for Strophe V
+            setupResonator();
+            
+            // Connect everything together
+            connectAudioNodes();
             
             // Set initial gains
+            // MANUAL ADJUSTMENT
             setInitialSpeakerGains();
             
             console.log("Spatial audio setup complete");
@@ -200,10 +302,92 @@ function getHexPosition(index, radius) {
     };
 }
 
+// Setup circular panner for transition 3-4
+function setupCircularPanner() {
+    if (!audioCtx) return;
+    
+    // Create a gain node to control the circular panning effect
+    circularPanner = {
+        angle: 0,
+        speed: 0.5, // Base rotation speed
+        active: false
+    };
+}
+
+// Setup resonator for strophe V
+function setupResonator() {
+    if (!audioCtx) return;
+    
+    // Create a convolver node for resonance effect
+    resonator = audioCtx.createConvolver();
+    
+    // Create a buffer for the impulse response
+    const sampleRate = audioCtx.sampleRate;
+    const bufferLength = 2 * sampleRate; // 2 seconds
+    const buffer = audioCtx.createBuffer(2, bufferLength, sampleRate);
+    
+    // Generate impulse response for piano-like resonance
+    for (let channel = 0; channel < 2; channel++) {
+        const data = buffer.getChannelData(channel);
+        for (let i = 0; i < bufferLength; i++) {
+            // Exponential decay
+            data[i] = (Math.random() * 2 - 1) * Math.pow(0.5, i / (bufferLength / 50));
+        }
+    }
+    
+    // Set the buffer to the convolver
+    resonator.buffer = buffer;
+    
+    // Create dry/wet mixer
+    dryGain = audioCtx.createGain();
+    wetGain = audioCtx.createGain();
+    
+    dryGain.gain.value = 1.0;
+    wetGain.gain.value = 0.0;
+}
+
+// Connect audio nodes based on the current scene
+function connectAudioNodes() {
+    if (!audioSource || !audioCtx) return;
+    
+    // Clear existing connections
+    try {
+        audioSource.disconnect();
+        panners.forEach(panner => panner.disconnect());
+        gainNodes.forEach(gain => gain.disconnect());
+        if (resonator) resonator.disconnect();
+        if (dryGain) dryGain.disconnect();
+        if (wetGain) wetGain.disconnect();
+        if (masterGain) masterGain.disconnect();
+    } catch (e) {
+        // Ignore disconnect errors
+    }
+    
+    // Basic connection for all scenes
+    panners.forEach((panner, index) => {
+        audioSource.connect(panner);
+        panner.connect(gainNodes[index]);
+        gainNodes[index].connect(masterGain);
+    });
+    
+    // Scene-specific routing
+    if (currentScene === "stropheV") {
+        // Strophe V uses dry/wet mixing with resonator
+        audioSource.connect(dryGain);
+        dryGain.connect(masterGain);
+        
+        audioSource.connect(resonator);
+        resonator.connect(wetGain);
+        wetGain.connect(masterGain);
+    }
+    
+    masterGain.connect(audioCtx.destination);
+}
+
 // Simplified play/pause handler
 function togglePlayback() {
     // Check if audio element exists
-    if (!audioElement) {
+    if (!currentAudioElement) {
         console.error("Audio element not found!");
         alert("Audio element not found. Check the HTML structure.");
         return;
@@ -241,7 +425,7 @@ function actuallyTogglePlayback() {
     if (playPauseButton.dataset.playing === 'false') {
         console.log("Attempting to play audio...");
         
-        const playPromise = audioElement.play();
+        const playPromise = currentAudioElement.play();
         if (playPromise !== undefined) {
             playPromise.then(() => {
                 console.log("Audio playback started successfully!");
@@ -251,6 +435,7 @@ function actuallyTogglePlayback() {
                 
                 if (audioInitialized) {
                     startPatternSwitching();
+                    startSpecialEffects();
                 }
             }).catch(error => {
                 console.error("Error playing audio:", error);
@@ -259,11 +444,12 @@ function actuallyTogglePlayback() {
         }
     } else {
         console.log("Pausing audio");
-        audioElement.pause();
+        currentAudioElement.pause();
         playPauseButton.dataset.playing = 'false';
         playPauseButton.style.setProperty('--play-pause-icon', '"\\25B6"');
         playPauseButton.title = "Play Audio";
         stopPatternSwitching();
+        stopSpecialEffects();
     }
 }
 
@@ -272,30 +458,30 @@ function tryDirectPlayback() {
     console.log("Attempting direct playback as fallback");
     
     // Unmute and set volume explicitly
-    audioElement.muted = false;
-    audioElement.volume = 1.0;
+    currentAudioElement.muted = false;
+    currentAudioElement.volume = 1.0;
     
     // Add inline event listeners for this attempt
     const successListener = () => {
         console.log("Direct playback successful!");
         playPauseButton.dataset.playing = 'true';
         playPauseButton.style.setProperty('--play-pause-icon', '"\\23F8"');
-        audioElement.removeEventListener('play', successListener);
+        currentAudioElement.removeEventListener('play', successListener);
     };
     
     const errorListener = (e) => {
         console.error("Direct playback failed:", e);
-        audioElement.removeEventListener('error', errorListener);
+        currentAudioElement.removeEventListener('error', errorListener);
         alert("Could not play audio. Please check if the audio file exists and try again.");
     };
     
-    audioElement.addEventListener('play', successListener);
-    audioElement.addEventListener('error', errorListener);
+    currentAudioElement.addEventListener('play', successListener);
+    currentAudioElement.addEventListener('error', errorListener);
     
     // Try to play with a slight delay
     setTimeout(() => {
         try {
-            const promise = audioElement.play();
+            const promise = currentAudioElement.play();
             if (promise) {
                 promise.catch(e => console.error("Promise rejection in direct play:", e));
             }
@@ -311,15 +497,17 @@ playPauseButton.addEventListener('click', togglePlayback);
 // Reset button functionality
 resetButton.addEventListener('click', () => {
     const wasPlaying = playPauseButton.dataset.playing === 'true';
-    audioElement.pause();
-    audioElement.currentTime = 0;
-    
+    currentAudioElement.pause();
+    currentAudioElement.currentTime = 0;
+    updateArabicPlayhead(); // Reset playhead position
+
     playPauseButton.dataset.playing = 'false';
     playPauseButton.style.setProperty('--play-pause-icon', '"\\25B6"');
     
     currentPatternIndex = 0;
     applyPattern(currentPatternIndex);
     stopPatternSwitching();
+    stopSpecialEffects();
     
     if (window.visualizer3D) {
         window.visualizer3D.resetOrientation();
@@ -345,10 +533,12 @@ document.addEventListener('click', event => {
 });
 
 // Set initial gain values
+// MANUAL ADJUSTMENT
 function setInitialSpeakerGains() {
     if (!gainNodes.length) return;
-    
-    const initialGains = [0.5, 0.3, 0.7, 0.4, 0.6, 0.2];
+    //MANUAL ADJUSTMENT
+    // const initialGains = [0.5, 0.3, 0.7, 0.4, 0.6, 0.2];
+    const initialGains = [0.5, 0,0,0,0,0];
     gainNodes.forEach((gainNode, index) => {
         gainNode.gain.value = initialGains[index];
     });
@@ -358,13 +548,108 @@ function setInitialSpeakerGains() {
     }
 }
 
+// Function to update the position of the Arabic playhead
+function updateArabicPlayhead() {
+    if (!currentAudioElement || !arabicPlayhead) return;
+
+    const duration = currentAudioElement.duration;
+    const currentTime = currentAudioElement.currentTime;
+
+    if (duration > 0) {
+        const percentage = (currentTime / duration) * 100;
+        arabicPlayhead.style.left = `${percentage}%`;
+    } else {
+        arabicPlayhead.style.left = '0%';
+    }
+}
+
+// Function to handle seeking audio when clicking the visualization container
+function handleSeek(event) {
+    console.log("handleSeek called"); // Log entry
+    if (!currentAudioElement || !arabicContainer) {
+        console.log("handleSeek: Missing audio element or container");
+        return;
+    }
+    // Check if duration is valid and available
+    if (!currentAudioElement.duration || currentAudioElement.duration <= 0 || isNaN(currentAudioElement.duration)) {
+        console.log("handleSeek: Audio duration not available or invalid:", currentAudioElement.duration);
+        // Potentially wait for metadata if needed, or just return
+        return;
+    }
+    // Check readyState - HAVE_METADATA (1) is minimum for duration, might need more for seeking smoothly
+    if (currentAudioElement.readyState < 1) {
+         console.log("handleSeek: Audio not ready for seeking. readyState:", currentAudioElement.readyState);
+         // You might want to wait for 'canplay' or 'canplaythrough' event if this happens often
+         return;
+    }
+
+
+    // Get the bounding rectangle of the container
+    const rect = arabicContainer.getBoundingClientRect();
+
+    // Calculate the click position relative to the container's left edge
+    const clickX = event.clientX - rect.left;
+
+    // Calculate the percentage position within the container
+    const percentage = Math.max(0, Math.min(1, clickX / rect.width));
+
+    // Calculate the new time based on the percentage and duration
+    const newTime = percentage * currentAudioElement.duration;
+
+    console.log(`handleSeek: Seeking to ${newTime.toFixed(3)}s (${(percentage * 100).toFixed(1)}%)`); // Log seek details
+
+    // Set the audio's current time
+    try {
+        // Ensure the new time is within valid bounds (important for some browsers/formats)
+        const clampedTime = Math.max(0, Math.min(newTime, currentAudioElement.duration));
+        currentAudioElement.currentTime = clampedTime;
+        console.log("handleSeek: currentTime set successfully to:", clampedTime); // Log success
+    } catch (e) {
+        console.error("handleSeek: Error setting currentTime:", e); // Log error
+        return; // Stop if setting time failed
+    }
+
+
+    // Immediately update the playhead position
+    updateArabicPlayhead();
+
+    // Always apply the pattern for the new time immediately after seeking
+    // This ensures the visualization and audio spatialization update instantly.
+    console.log("handleSeek: Applying pattern for new time", newTime); // Log pattern application
+    const timestamps = timestampPatterns[currentScene].timestamps;
+    let newIndex = timestamps.findIndex((timestamp, index) => {
+        const nextTimestamp = timestamps[index + 1] || Infinity;
+        return newTime >= timestamp && newTime < nextTimestamp;
+    });
+    if (newIndex === -1) newIndex = 0; // Default to first pattern if not found
+
+    // Apply the pattern and update the current index
+    currentPatternIndex = newIndex;
+    applyPattern(currentPatternIndex);
+
+    // Update 3D visualization as well
+    if (window.updateVisualization3D) {
+        window.updateVisualization3D(gainNodes);
+    }
+}
+
 // Start pattern switching
 function startPatternSwitching() {
     stopPatternSwitching();
     patternInterval = setInterval(() => {
-        if (audioElement.paused) return;
+        if (currentAudioElement.paused) return;
+
+        // Update Arabic playhead position
+        updateArabicPlayhead();
+
+        // Special handling for Transition 3-4 (circular panning)
+        if (currentScene === 'transition3-4') {
+            return;  // Skip normal pattern switching, handled by circular panning
+        }
         
-        const currentTime = audioElement.currentTime;
+        const currentTime = currentAudioElement.currentTime;
+        const timestamps = timestampPatterns[currentScene].timestamps;
+        const patterns = timestampPatterns[currentScene].patterns;
         
         let newIndex = timestamps.findIndex((timestamp, index) => {
             const nextTimestamp = timestamps[index + 1] || Infinity;
@@ -376,6 +661,11 @@ function startPatternSwitching() {
         if (newIndex !== currentPatternIndex) {
             currentPatternIndex = newIndex;
             applyPattern(currentPatternIndex);
+        }
+        
+        // Special handling for StropheV (dry/wet balance)
+        if (currentScene === 'stropheV' && dryGain && wetGain) {
+            updateDryWetBalance(currentTime);
         }
         
         if (window.updateVisualization3D) {
@@ -392,33 +682,269 @@ function stopPatternSwitching() {
     }
 }
 
+// Start special audio effects animations
+function startSpecialEffects() {
+    if (animationFrameId) return;
+    
+    // Handle circular panning for Transition 3-4
+    if (currentScene === 'transition3-4') {
+        circularPanner.active = true;
+        animateCircularPanning();
+    }
+}
+
+// Stop special effects animations
+function stopSpecialEffects() {
+    circularPanner.active = false;
+    
+    if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+    }
+}
+
+// Animate circular panning for Transition 3-4
+function animateCircularPanning() {
+    if (!circularPanner.active) return;
+    
+    const currentTime = currentAudioElement ? currentAudioElement.currentTime : 0;
+    const audioDuration = currentAudioElement ? currentAudioElement.duration || 10 : 10;
+    
+    // Calculate acceleration factor based on time
+    // Start slow, gradually accelerate to maximum speed
+    accelerationFactor = 1.0 + (currentTime / audioDuration) * 5.0;
+    
+    // Update the angle
+    circularPanner.angle += (circularPanner.speed * accelerationFactor) * 0.05;
+    
+    // Normalize the angle
+    if (circularPanner.angle > Math.PI * 2) {
+        circularPanner.angle -= Math.PI * 2;
+    }
+    
+    // Calculate gains for each speaker to create a moving sound
+    if (gainNodes && gainNodes.length === 6) {
+        const baseAngle = (Math.PI * 2) / 6; // Angle between speakers
+        
+        for (let i = 0; i < 6; i++) {
+            // Calculate angle for this speaker
+            const speakerAngle = i * baseAngle;
+            
+            // Calculate distance from current angle to speaker angle
+            let angleDiff = Math.abs(circularPanner.angle - speakerAngle);
+            if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
+            
+            // Convert angle difference to gain (closer angle = higher gain)
+            const gain = Math.max(0, 1 - (angleDiff / (baseAngle * 1.5)));
+            
+            // Apply gain
+            gainNodes[i].gain.setTargetAtTime(gain, audioCtx.currentTime, 0.05);
+        }
+    }
+    
+    // Update visualization if available
+    if (window.updateVisualization3D) {
+        window.updateVisualization3D(gainNodes);
+    }
+    
+    // Continue animation
+    animationFrameId = requestAnimationFrame(animateCircularPanning);
+}
+
+// Update dry/wet balance for Strophe V
+function updateDryWetBalance(currentTime) {
+    if (!dryGain || !wetGain) return;
+    
+    // Calculate wet/dry balance based on time
+    // Start dry, gradually increase wet signal
+    const audioDuration = currentAudioElement ? currentAudioElement.duration || 10 : 10;
+    const wetAmount = Math.min(1.0, currentTime / (audioDuration * 0.7)); // Reach full wet at 70% of duration
+    
+    // Apply crossfade
+    dryGain.gain.setTargetAtTime(1.0 - (wetAmount * 0.8), audioCtx.currentTime, 0.1); // Keep some dry signal
+    wetGain.gain.setTargetAtTime(wetAmount, audioCtx.currentTime, 0.1);
+}
+
 // Apply a specific pattern
 function applyPattern(index) {
     if (!gainNodes.length) return;
     
-    const pattern = presets[index];
+    const patterns = timestampPatterns[currentScene].patterns;
+    if (!patterns || !patterns[index]) return;
+    
+    const pattern = patterns[index];
     pattern.forEach((gain, idx) => {
         if (gainNodes[idx]) {
-            gainNodes[idx].gain.setTargetAtTime(gain, audioCtx.currentTime, 0.1);
+            // If in mixing mode and not performer mode, only apply pattern if not manually set
+            if (!isMixingMode || currentMode === 'performer') {
+                gainNodes[idx].gain.setTargetAtTime(gain, audioCtx.currentTime, 0.1);
+            }
         }
     });
 }
 
-// Add simple audio event listeners for debugging
-audioElement.addEventListener('loadeddata', () => {
-    console.log("Audio loaded successfully! Duration:", audioElement.duration);
-});
+// Function to change the mode (engineer, audience, performer)
+function setMode(mode) {
+    if (!['engineer', 'audience', 'performer'].includes(mode)) return;
+    
+    currentMode = mode;
+    updateListenerPosition();
+    
+    // Update UI
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === mode);
+    });
+    
+    // Show/hide performer-specific UI
+    const performerView = document.querySelector('.performer-view');
+    if (performerView) {
+        performerView.classList.toggle('active', mode === 'performer');
+    }
+    
+    // Disable manual controls in performer mode
+    if (mode === 'performer') {
+        document.querySelector('#mixModeToggle').checked = false;
+        isMixingMode = false;
+    }
+    
+    // Reset view in 3D visualization
+    if (window.visualizer3D) {
+        window.visualizer3D.resetOrientation();
+        
+        // For audience mode, move back
+        if (mode === 'audience' && window.visualizer3D.moveCamera) {
+            window.visualizer3D.moveCamera(0, 1.7, 2);
+        }
+        
+        // For performer mode, move to front
+        if (mode === 'performer' && window.visualizer3D.moveCamera) {
+            window.visualizer3D.moveCamera(0, 1.7, -2);
+        }
+    }
+    
+    // Update the pattern for current time position
+    if (!currentAudioElement.paused) {
+        const currentTime = currentAudioElement.currentTime;
+        
+        const timestamps = timestampPatterns[currentScene].timestamps;
+        let newIndex = timestamps.findIndex((timestamp, index) => {
+            const nextTimestamp = timestamps[index + 1] || Infinity;
+            return currentTime >= timestamp && currentTime < nextTimestamp;
+        });
+        
+        if (newIndex === -1) newIndex = 0;
+        applyPattern(newIndex);
+    }
+}
 
-audioElement.addEventListener('play', () => {
-    console.log("Audio play event triggered");
-});
+// Function to change the scene
+function setScene(scene) {
+    if (!['default', 'transition1-2', 'transition3-4', 'stropheV'].includes(scene)) return;
+    
+    // Stop any active animations
+    stopPatternSwitching();
+    stopSpecialEffects();
+    
+    currentScene = scene;
+    
+    // Update global variables for access from other components
+    window.timestamps = timestampPatterns[scene].timestamps;
+    window.presets = timestampPatterns[scene].patterns;
+    
+    // Update audio source
+    const wasPlaying = currentAudioElement && !currentAudioElement.paused;
+    
+    currentAudioElement = audioElements[scene];
+    window.audioElement = currentAudioElement;
+    
+    // Reset time position
+    currentAudioElement.currentTime = 0;
+    currentPatternIndex = 0;
+    updateArabicPlayhead(); // Reset playhead on scene change
 
-audioElement.addEventListener('error', (e) => {
-    console.error("Audio error event:", e);
-    console.error("Audio error code:", audioElement.error ? audioElement.error.code : "No error code");
-    console.error("Audio network state:", audioElement.networkState);
-    alert("Error with audio playback. Check browser console for details.");
-});
+    // Reconnect audio nodes for the new scene
+    if (audioInitialized) {
+        // Create a new source for the new audio element
+        if (audioSource) {
+            try {
+                audioSource.disconnect();
+            } catch (e) {
+                // Ignore disconnect errors
+            }
+        }
+        
+        try {
+            audioSource = audioCtx.createMediaElementSource(currentAudioElement);
+        } catch (e) {
+            // If already connected, just update connections
+            if (e.message && e.message.includes('already connected')) {
+                console.log("Audio element already connected, updating routing");
+            } else {
+                console.error("Error creating media element source:", e);
+            }
+        }
+        
+        // Update audio routing
+        connectAudioNodes();
+        applyPattern(currentPatternIndex);
+    }
+    
+    // Update UI
+    document.querySelectorAll('.scene-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.scene === scene);
+    });
+    
+    // Resume playback if needed
+    if (wasPlaying) {
+        currentAudioElement.play()
+            .then(() => {
+                startPatternSwitching();
+                startSpecialEffects();
+            })
+            .catch(e => console.error("Error playing new audio scene:", e));
+    }
+    
+    // Show trivia for the current scene
+    showSceneTrivia(scene);
+}
+
+// Function to toggle mixing mode
+function setMixingMode(enabled) {
+    isMixingMode = enabled;
+    
+    // In performer mode, always disable mixing
+    if (currentMode === 'performer') {
+        isMixingMode = false;
+    }
+    
+    // Update UI
+    document.querySelector('#mixModeToggle').checked = isMixingMode;
+    
+    // If turning off mix mode, reapply current pattern
+    if (!isMixingMode) {
+        applyPattern(currentPatternIndex);
+    }
+}
+
+// Show trivia popup with content specific to the current scene
+function showSceneTrivia(scene) {
+    const triviaContent = document.querySelector('.trivia-content');
+    if (!triviaContent || !window.getSceneTrivia) return;
+    
+    const sceneTrivia = window.getSceneTrivia(scene);
+    if (!sceneTrivia) return;
+    
+    triviaContent.innerHTML = sceneTrivia.content;
+    
+    // Auto-show trivia for 3 seconds when scene changes
+    const triviaContainer = document.querySelector('.trivia-container');
+    if (triviaContainer) {
+        triviaContainer.style.display = 'flex';
+        setTimeout(() => {
+            triviaContainer.style.display = 'none';
+        }, 3000);
+    }
+}
 
 // Initialize on DOM load
 document.addEventListener('DOMContentLoaded', () => {
@@ -434,100 +960,100 @@ document.addEventListener('DOMContentLoaded', () => {
         resetButton.title = "Reset to Beginning";
     }
     
-    // Add a super simple direct play button
-    const container = document.getElementById('immersive-container');
-    const directPlayButton = document.createElement('button');
-    directPlayButton.textContent = "Simple Play";
-    directPlayButton.style.position = "absolute";
-    directPlayButton.style.left = "10px";
-    directPlayButton.style.top = "10px";
-    directPlayButton.style.zIndex = "1000";
-    
-    directPlayButton.addEventListener('click', function() {
-        // Simplest possible approach
-        const audio = document.getElementById("double");
-        if (audio) {
-            try {
-                // First try to play directly
-                audio.play().then(() => {
-                    console.log("Simple play successful");
-                }).catch(e => {
-                    console.error("Simple play failed:", e);
-                    
-                    // If that fails, create a brand new audio element and try again
-                    const newAudio = new Audio(audio.src);
-                    newAudio.play().then(() => {
-                        console.log("New audio element play successful");
-                    }).catch(e2 => {
-                        console.error("New audio element play failed too:", e2);
-                    });
-                });
-            } catch (e) {
-                console.error("Error in simple play:", e);
-            }
-        }
+    // Set up mode selection
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            setMode(btn.dataset.mode);
+        });
     });
     
-    container.appendChild(directPlayButton);
+    // Set up scene selection
+    document.querySelectorAll('.scene-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            setScene(btn.dataset.scene);
+        });
+    });
     
-    // Check if audio file exists
-    checkAudioFileExists();
-});
-
-// Function to check if the audio file exists
-function checkAudioFileExists() {
-    if (!audioElement || !audioElement.src) {
-        console.error("No audio element or source to check");
-        return;
+    // Set up mixing mode toggle
+    const mixModeToggle = document.getElementById('mixModeToggle');
+    if (mixModeToggle) {
+        mixModeToggle.addEventListener('change', () => {
+            setMixingMode(mixModeToggle.checked);
+        });
     }
     
-    // Try multiple approaches to verify the file
+    // Set up trivia button
+    const triviaButton = document.getElementById('triviaButton');
+    const triviaContainer = document.querySelector('.trivia-container');
+    const closeTrivia = document.querySelector('.close-trivia');
     
-    // 1. Use fetch (might fail with CORS)
-    fetch(audioElement.src, { method: 'HEAD' })
-        .then(response => {
-            if (response.ok) {
-                console.log("✓ Audio file exists (fetch check):", audioElement.src);
-            } else {
-                console.error("✗ Audio file not found (fetch check):", audioElement.src);
-                showFileErrorMessage();
-            }
-        })
-        .catch(error => {
-            console.warn("Fetch check failed (might be CORS):", error);
-            
-            // 2. Try a different approach - create a temporary Audio object
-            const tempAudio = new Audio();
-            tempAudio.addEventListener('canplaythrough', () => {
-                console.log("✓ Audio file exists (canplaythrough check)");
-            });
-            tempAudio.addEventListener('error', () => {
-                console.error("✗ Audio file not found (canplaythrough check)");
-                showFileErrorMessage();
-            });
-            tempAudio.src = audioElement.src;
+    if (triviaButton && triviaContainer) {
+        triviaButton.addEventListener('click', () => {
+            triviaContainer.style.display = 'flex';
         });
-}
+    }
+    
+    if (closeTrivia && triviaContainer) {
+        closeTrivia.addEventListener('click', () => {
+            triviaContainer.style.display = 'none';
+        });
+    }
+    
+    // Set up trivia navigation
+    document.querySelectorAll('.trivia-nav').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const section = btn.dataset.section;
+            if (window.getTriviaContent && section) {
+                const content = window.getTriviaContent(section);
+                const triviaContent = document.querySelector('.trivia-content');
+                if (triviaContent && content) {
+                    triviaContent.innerHTML = content.content;
+                    
+                    document.querySelectorAll('.trivia-nav').forEach(navBtn => {
+                        navBtn.classList.toggle('active', navBtn === btn);
+                    });
+                }
+            }
+        });
+    });
+    
+    // Initialize mode and scene
+    setMode('engineer');
+    setScene('default');
+    
+    // Add click listener for seeking on the Arabic visualization
+    if (arabicContainer) {
+        arabicContainer.addEventListener('click', handleSeek);
+    }
 
-// Show error message if the file can't be found
-function showFileErrorMessage() {
-    // Create a visible error message on the page
-    const container = document.getElementById('immersive-container');
-    const errorMsg = document.createElement('div');
-    errorMsg.style.position = "absolute";
-    errorMsg.style.top = "50%";
-    errorMsg.style.left = "50%";
-    errorMsg.style.transform = "translate(-50%, -50%)";
-    errorMsg.style.background = "rgba(0,0,0,0.8)";
-    errorMsg.style.color = "red";
-    errorMsg.style.padding = "20px";
-    errorMsg.style.borderRadius = "10px";
-    errorMsg.style.zIndex = "2000";
-    errorMsg.innerHTML = `
-        <h2>Audio File Error</h2>
-        <p>Could not load audio file from: ${audioElement.src}</p>
-        <p>Make sure the file exists at the specified path.</p>
-        <p>Expected location: audio/double-clarinet-si.mp3</p>
-    `;
-    container.appendChild(errorMsg);
+    // Check if audio files exist
+    checkAudioFilesExist();
+});
+
+// Function to check if the audio files exist
+function checkAudioFilesExist() {
+    const audioIds = ['double', 'transition1-2', 'transition3-4', 'stropheV'];
+    
+    audioIds.forEach(id => {
+        const element = document.getElementById(id);
+        if (!element) {
+            console.error(`Audio element with ID '${id}' not found!`);
+            return;
+        }
+        
+        // Try fetch to check if file exists
+        fetch(element.src, { method: 'HEAD' })
+            .then(response => {
+                if (response.ok) {
+                    console.log(`✓ Audio file exists: ${element.src}`);
+                } else {
+                    console.error(`✗ Audio file not found: ${element.src}`);
+                    element.dataset.fileExists = 'false';
+                }
+            })
+            .catch(() => {
+                // For CORS errors, assume file exists but is restricted
+                console.log(`? Cannot verify audio file (CORS): ${element.src}`);
+            });
+    });
 }
