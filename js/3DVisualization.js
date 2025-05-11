@@ -725,9 +725,16 @@ class AudioVisualizer3D {
     onWindowResize() {
         if (!this.camera || !this.renderer || !this.container) return;
         
-        this.camera.aspect = this.container.clientWidth / this.container.clientHeight;
+        // Get the actual visible area of the container
+        const rect = this.container.getBoundingClientRect();
+        const width = rect.width;
+        const height = rect.height;
+        
+        if (width <= 0 || height <= 0) return; // Avoid division by zero
+        
+        this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
-        this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
+        this.renderer.setSize(width, height, true); // Set to CSS size with updateStyle=true
         
         // Recreate joystick to ensure proper positioning
         this.setupJoystick();
@@ -737,9 +744,9 @@ class AudioVisualizer3D {
         
         // Update 2D visualization on resize
         if (this.topdownCanvas) {
-            const rect = this.topdownCanvas.getBoundingClientRect();
-            this.topdownCanvas.width = rect.width * window.devicePixelRatio;
-            this.topdownCanvas.height = rect.height * window.devicePixelRatio;
+            const canvasRect = this.topdownCanvas.getBoundingClientRect();
+            this.topdownCanvas.width = canvasRect.width * window.devicePixelRatio;
+            this.topdownCanvas.height = canvasRect.height * window.devicePixelRatio;
             this.updateTopdownView();
         }
     }
@@ -1124,6 +1131,96 @@ class AudioVisualizer3D {
             ctx.restore();
         }
     }
+
+    /**
+     * Move camera to a specific position
+     */
+    moveCamera(x, y, z) {
+        this.camera.position.set(x, y, z);
+        
+        // If we're at the center (audio engineer mode), look down slightly
+        if (x === 0 && z === 0) {
+            // Look at the floor slightly in front of us
+            this.camera.lookAt(0, 0, -1);
+        } else {
+            // Otherwise look at the center
+            this.camera.lookAt(0, y/2, 0);
+        }
+    }
+    
+    /**
+     * Move to a specific speaker's position and orientation
+     */
+    moveToSpeakerPosition(speakerIndex) {
+        if (speakerIndex < 0 || speakerIndex >= this.speakers.length) return;
+        
+        // Get the speaker object
+        const speaker = this.speakers[speakerIndex];
+        if (!speaker) return;
+        
+        // Get speaker position
+        const position = speaker.position.clone();
+        
+        // Move slightly behind the speaker (as if standing there)
+        const centerDirection = new THREE.Vector3(0, position.y, 0).sub(position).normalize();
+        position.add(centerDirection.multiplyScalar(-0.5)); // Step back a bit
+        
+        // Set camera position to be at person height
+        position.y = 1.7;
+        this.camera.position.copy(position);
+        
+        // Look at the center
+        this.camera.lookAt(0, position.y, 0);
+        
+        // Update speaker highlight
+        this.highlightSpeaker(speakerIndex);
+    }
+    
+    /**
+     * Highlight the selected speaker in performer mode
+     */
+    highlightSpeaker(speakerIndex) {
+        // Reset all speakers to normal appearance
+        this.speakers.forEach((speaker, index) => {
+            speaker.children.forEach(child => {
+                if (child instanceof THREE.Mesh && 
+                    child.material && 
+                    child.material.color) {
+                    
+                    // Reset color to normal
+                    if (index !== speakerIndex) {
+                        if (child.material.color.getHexString() === 'e69138') {
+                            // For the cone, reset to orange
+                            child.material.color.setHex(0xe69138);
+                            if (child.material.emissive) {
+                                child.material.emissive.setHex(0xe69138);
+                            }
+                        } else {
+                            // For other parts, reset to dark gray
+                            child.material.color.setHex(0x333333);
+                        }
+                    }
+                }
+            });
+        });
+        
+        // Highlight the selected speaker
+        if (this.speakers[speakerIndex]) {
+            this.speakers[speakerIndex].children.forEach(child => {
+                if (child instanceof THREE.Mesh && 
+                    child.material && 
+                    child.material.color) {
+                    
+                    // Highlight with bright color
+                    child.material.color.setHex(0x00ff00);
+                    if (child.material.emissive) {
+                        child.material.emissive.setHex(0x00ff00);
+                        child.material.emissiveIntensity = 0.5;
+                    }
+                }
+            });
+        }
+    }
 }
 
 // Initialize the 3D visualizer when the DOM is fully loaded
@@ -1145,6 +1242,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     window.visualizer3D.resetOrientation();
                 }
             });
+        }
+        
+        // Initialize with the current mode
+        const activeBtn = document.querySelector('.mode-btn.active');
+        if (activeBtn) {
+            const mode = activeBtn.dataset.mode;
+            if (window.setMode) {
+                window.setMode(mode);
+            }
         }
     }, 500);
 });
