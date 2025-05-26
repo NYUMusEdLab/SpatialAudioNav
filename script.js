@@ -861,8 +861,12 @@ function setMode(mode) {
         
         // For audience mode, move back
         if (mode === 'audience' && window.visualizer3D.moveCamera) {
-            window.visualizer3D.moveCamera(0, 1.7, 2);
+            window.visualizer3D.moveCamera(0, 1.7, 0.5);
         } 
+        // if (mode === 'audience' && window.visualizer3D.moveCamera) {
+        //     window.visualizer3D.moveCamera(0, 1.7, 2);
+        // } 
+        
         // For engineer mode, position higher looking down
         else if (mode === 'engineer' && window.visualizer3D.moveCamera) {
             window.visualizer3D.moveCamera(0, 2.5, 0); // Lower height to keep things visible
@@ -1083,7 +1087,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     // Initialize mode and scene
-    setMode('engineer');
+    setMode('audience');
     setScene('default');
     
     // Add click listener for seeking on the Arabic visualization
