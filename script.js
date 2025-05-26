@@ -14,9 +14,10 @@ let audioInitialized = false;
 const posX = 0, posY = 1.7, posZ = 0;
 
 // Application states
-let currentMode = 'engineer'; // engineer, audience, performer
-let currentScene = 'default'; // default, transition1-2, transition3-4, stropheV
-let isMixingMode = false; // Listen mode (false) or Mix mode (true)
+let currentMode = 'audience'; // Default to audience mode
+let currentScene = 'default';
+let isMixingMode = false;
+let currentPerformerSpeakerIndex = 0; // For performer mode
 
 // Audio effects for special scenes
 let circularPanner = null;
@@ -36,12 +37,11 @@ let animationFrameId = null;
 // Get the audio elements after DOM load
 document.addEventListener('DOMContentLoaded', () => {
     audioElements = {
-        'default': document.getElementById("double"),
-        'transition1-2': document.getElementById("transition1-2"),
-        'transition3-4': document.getElementById("transition3-4"),
-        'stropheV': document.getElementById("stropheV")
-    };
-    
+        'default': document.getElementById('double'),
+        'transition1-2': document.getElementById('transition1-2'),
+        'transition3-4': document.getElementById('transition3-4'),
+        'stropheV': document.getElementById('stropheV'),
+    }
     currentAudioElement = audioElements['default'];
     window.audioElement = currentAudioElement;
 });
@@ -103,10 +103,20 @@ window.presets = timestampPatterns.default.patterns;
 
 // Mode-specific positions
 const modePositions = {
-    engineer: { x: 0, y: 1.7, z: 0 }, // Center of the room
+    engineer: { x: 0, y: 2.5, z: 0 }, // Center of the room, slightly higher, not too high
     audience: { x: 0, y: 1.7, z: 2 },  // Back of the room
-    performer: { x: 0, y: 1.7, z: -2 } // Front of the room
+    performer: { x: 0, y: 1.7, z: -2 } // Front of the room (will be overridden)
 };
+
+// Speaker positions for performer mode
+const speakerPositions = [
+    { angle: 210, x: -6.1, y: 1.7, z: -3.5 }, // Speaker 1 (left front)
+    { angle: 150, x: 6.1, y: 1.7, z: -3.5 },  // Speaker 2 (right front)
+    { angle: 90, x: 7, y: 1.7, z: 0 },       // Speaker 3 (right)
+    { angle: 30, x: 6.1, y: 1.7, z: 3.5 },   // Speaker 4 (right back)
+    { angle: 330, x: -6.1, y: 1.7, z: 3.5 }, // Speaker 5 (left back)
+    { angle: 270, x: -7, y: 1.7, z: 0 }      // Speaker 6 (left)
+];
 
 // Pattern switching variables
 let patternInterval = null;
@@ -173,7 +183,14 @@ function initAudioContext() {
 function updateListenerPosition() {
     if (!audioCtx || !audioCtx.listener) return;
     
-    const position = modePositions[currentMode];
+    let position;
+    
+    // For performer mode, use the position of the selected speaker
+    if (currentMode === 'performer' && speakerPositions[currentPerformerSpeakerIndex]) {
+        position = speakerPositions[currentPerformerSpeakerIndex];
+    } else {
+        position = modePositions[currentMode];
+    }
     
     // Set listener position
     const listener = audioCtx.listener;
@@ -193,7 +210,15 @@ function updateListenerPosition() {
     if (currentMode === 'audience') {
         forwardZ = -1; // facing forward
     } else if (currentMode === 'performer') {
-        forwardZ = 1; // facing the audience
+        // Calculate direction vector pointing toward the center
+        forwardX = -position.x;
+        forwardZ = -position.z;
+        // Normalize the vector
+        const length = Math.sqrt(forwardX * forwardX + forwardZ * forwardZ);
+        if (length > 0) {
+            forwardX /= length;
+            forwardZ /= length;
+        }
     }
     
     if (listener.forwardX) {
@@ -796,15 +821,38 @@ function setMode(mode) {
     });
     
     // Show/hide performer-specific UI
-    const performerView = document.querySelector('.performer-view');
-    if (performerView) {
-        performerView.classList.toggle('active', mode === 'performer');
+    const performerDropdown = document.getElementById('performer-dropdown-container');
+    if (performerDropdown) {
+        performerDropdown.style.display = mode === 'performer' ? 'block' : 'none';
     }
     
     // Disable manual controls in performer mode
     if (mode === 'performer') {
-        document.querySelector('#mixModeToggle').checked = false;
-        isMixingMode = false;
+        const mixModeToggle = document.querySelector('#mixModeToggle');
+        if (mixModeToggle) {
+            mixModeToggle.checked = false;
+            isMixingMode = false;
+        }
+    }
+    
+    // Handle view swapping for different modes
+    const sceneContainer = document.getElementById('scene-container');
+    const topdownView = document.querySelector('.topdown-view');
+    
+    if (sceneContainer && topdownView) {
+        // In engineer mode, make 2D view bigger and 3D view smaller
+        if (mode === 'engineer') {
+            sceneContainer.classList.add('minimized');
+            topdownView.classList.add('expanded');
+        } else {
+            sceneContainer.classList.remove('minimized');
+            topdownView.classList.remove('expanded');
+        }
+        
+        // Force a resize event after a short delay to ensure proper rendering after class changes
+        setTimeout(() => {
+            window.dispatchEvent(new Event('resize'));
+        }, 50);
     }
     
     // Reset view in 3D visualization
@@ -814,11 +862,14 @@ function setMode(mode) {
         // For audience mode, move back
         if (mode === 'audience' && window.visualizer3D.moveCamera) {
             window.visualizer3D.moveCamera(0, 1.7, 2);
+        } 
+        // For engineer mode, position higher looking down
+        else if (mode === 'engineer' && window.visualizer3D.moveCamera) {
+            window.visualizer3D.moveCamera(0, 2.5, 0); // Lower height to keep things visible
         }
-        
-        // For performer mode, move to front
-        if (mode === 'performer' && window.visualizer3D.moveCamera) {
-            window.visualizer3D.moveCamera(0, 1.7, -2);
+        // For performer mode, position at the selected speaker
+        else if (mode === 'performer' && window.visualizer3D.moveToSpeakerPosition) {
+            window.visualizer3D.moveToSpeakerPosition(currentPerformerSpeakerIndex);
         }
     }
     
@@ -966,6 +1017,20 @@ document.addEventListener('DOMContentLoaded', () => {
             setMode(btn.dataset.mode);
         });
     });
+    
+    // Set up performer speaker selection
+    const performerSelect = document.getElementById('performer-speaker-select');
+    if (performerSelect) {
+        performerSelect.addEventListener('change', () => {
+            currentPerformerSpeakerIndex = parseInt(performerSelect.value);
+            if (currentMode === 'performer') {
+                updateListenerPosition();
+                if (window.visualizer3D && window.visualizer3D.moveToSpeakerPosition) {
+                    window.visualizer3D.moveToSpeakerPosition(currentPerformerSpeakerIndex);
+                }
+            }
+        });
+    }
     
     // Set up scene selection
     document.querySelectorAll('.scene-btn').forEach(btn => {
