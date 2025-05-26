@@ -15,6 +15,19 @@ class AudioVisualizer3D {
         this.rotationAngle = 0;
         this.isRotating = false;
         this.rotationSpeed = 0;
+        // Add new movement properties
+        this.listenerPosition = new THREE.Vector3(0, 1.7, 0.5);
+        this.moveSpeed = 0.1;
+        this.rotationKeySpeed = 0.03;
+        this.maxRadius = 6.5; // Slightly less than speaker radius (7) to avoid touching speakers
+        this.keys = {
+            w: false,
+            a: false,
+            s: false,
+            d: false,
+            j: false,
+            l: false
+        };
         this.container = document.getElementById('scene-container');
         this.joystickContainer = document.getElementById('joystick-container');
         this.isDragging = false;
@@ -27,6 +40,7 @@ class AudioVisualizer3D {
         this.init();
         this.setupJoystick();
         this.setupDragControls(); // Add drag controls
+        this.setupKeyboardControls(); // Add keyboard controls
         this.initTopdownView(); // Initialize 2D visualization
         this.animate();
         
@@ -588,21 +602,138 @@ class AudioVisualizer3D {
         this.isDragging = false;
     }
     
+    setupKeyboardControls() {
+        // Keyboard event listeners
+        window.addEventListener('keydown', this.onKeyDown.bind(this));
+        window.addEventListener('keyup', this.onKeyUp.bind(this));
+        
+        // Prevent default behavior for movement keys when focused on the scene
+        this.container.addEventListener('keydown', (event) => {
+            const key = event.key.toLowerCase();
+            if (['w', 'a', 's', 'd', 'j', 'l'].includes(key)) {
+                event.preventDefault();
+            }
+        });
+        
+        // Make container focusable for keyboard events
+        this.container.setAttribute('tabindex', '0');
+        this.container.style.outline = 'none'; // Remove focus outline
+    }
+
+    onKeyDown(event) {
+        const key = event.key.toLowerCase();
+        if (this.keys.hasOwnProperty(key)) {
+            this.keys[key] = true;
+            event.preventDefault();
+        }
+    }
+
+    onKeyUp(event) {
+        const key = event.key.toLowerCase();
+        if (this.keys.hasOwnProperty(key)) {
+            this.keys[key] = false;
+            event.preventDefault();
+        }
+    }
+
+    updateMovement() {
+        let moved = false;
+        let rotated = false;
+        
+        // Calculate movement direction based on current rotation
+        const forward = new THREE.Vector3(-Math.sin(this.rotationAngle), 0, -Math.cos(this.rotationAngle));
+        const right = new THREE.Vector3(Math.cos(this.rotationAngle), 0, -Math.sin(this.rotationAngle));
+        
+        // Movement vector
+        const movement = new THREE.Vector3(0, 0, 0);
+        
+        // WASD movement
+        if (this.keys.w) { // Forward
+            movement.add(forward.clone().multiplyScalar(this.moveSpeed));
+            moved = true;
+        }
+        if (this.keys.s) { // Backward
+            movement.add(forward.clone().multiplyScalar(-this.moveSpeed));
+            moved = true;
+        }
+        if (this.keys.a) { // Left
+            movement.add(right.clone().multiplyScalar(-this.moveSpeed));
+            moved = true;
+        }
+        if (this.keys.d) { // Right
+            movement.add(right.clone().multiplyScalar(this.moveSpeed));
+            moved = true;
+        }
+        
+        // Apply movement with collision detection
+        if (moved) {
+            const newPosition = this.listenerPosition.clone().add(movement);
+            
+            // Check if new position is within bounds (circular boundary)
+            const distance = Math.sqrt(newPosition.x * newPosition.x + newPosition.z * newPosition.z);
+            if (distance <= this.maxRadius) {
+                this.listenerPosition.copy(newPosition);
+            } else {
+                // If outside bounds, move to the edge in that direction
+                const direction = newPosition.clone().normalize();
+                this.listenerPosition.x = direction.x * this.maxRadius;
+                this.listenerPosition.z = direction.z * this.maxRadius;
+            }
+        }
+        
+        // JL rotation
+        if (this.keys.j) { // Rotate left
+            this.rotationAngle += this.rotationKeySpeed;
+            rotated = true;
+        }
+        if (this.keys.l) { // Rotate right
+            this.rotationAngle -= this.rotationKeySpeed;
+            rotated = true;
+        }
+        
+        // Update positions if movement or rotation occurred
+        if (moved || rotated) {
+            this.updateListenerRotation();
+        }
+    }
+
     updateListenerRotation() {
         // Update the listener rotation
         this.listener.rotation.y = this.rotationAngle;
         
-        // Update the camera position for better immersion
-        const cameraDistance = 0.5; // Distance behind the listener
-        this.camera.position.x = Math.sin(this.rotationAngle) * cameraDistance;
-        this.camera.position.z = Math.cos(this.rotationAngle) * cameraDistance;
-        this.camera.lookAt(0, 1.7, 0);
+        // Update listener position
+        this.listener.position.copy(this.listenerPosition);
         
-        // Send rotation to the audio context if it exists
+        // Update the camera position to follow the listener
+        const cameraDistance = 0.5; // Distance behind the listener
+        const cameraOffset = new THREE.Vector3(
+            Math.sin(this.rotationAngle) * cameraDistance,
+            0,
+            Math.cos(this.rotationAngle) * cameraDistance
+        );
+        
+        this.camera.position.copy(this.listenerPosition.clone().add(cameraOffset));
+        
+        // Look forward from the listener's perspective
+        const lookTarget = this.listenerPosition.clone().add(
+            new THREE.Vector3(
+                -Math.sin(this.rotationAngle) * 10,
+                0,
+                -Math.cos(this.rotationAngle) * 10
+            )
+        );
+        this.camera.lookAt(lookTarget);
+        
+        // Send rotation and position to the audio context if it exists
         if (window.audioCtx && window.listener) {
             // Update the WebAudio API listener orientation
-            window.listener.forwardX.value = Math.sin(this.rotationAngle);
-            window.listener.forwardZ.value = Math.cos(this.rotationAngle);
+            window.listener.forwardX.value = -Math.sin(this.rotationAngle);
+            window.listener.forwardZ.value = -Math.cos(this.rotationAngle);
+            
+            // Update the WebAudio API listener position
+            window.listener.positionX.value = this.listenerPosition.x;
+            window.listener.positionY.value = this.listenerPosition.y;
+            window.listener.positionZ.value = this.listenerPosition.z;
         }
         
         // Update the 2D top-down view
@@ -755,6 +886,7 @@ class AudioVisualizer3D {
         requestAnimationFrame(this.animate.bind(this));
         
         this.updateRotation();
+        this.updateMovement(); // Add movement update
         this.updateSoundWaves();
         
         // Render the scene
@@ -765,17 +897,26 @@ class AudioVisualizer3D {
     resetOrientation() {
         this.rotationAngle = 0;
         this.rotationSpeed = 0;
+        this.listenerPosition.set(0, 1.7, 0.5); // Reset position to center
         this.listener.rotation.y = 0;
-        // Position camera between speakers 1 and 2, looking at center
-        this.camera.position.set(0, 1.7, 0.5);
-        this.camera.lookAt(0, 1.7, -10); // Look toward negative Z (between speakers 1 and 2)
+        this.listener.position.copy(this.listenerPosition);
         
-        // Update WebAudio API listener orientation
+        // Position camera behind the listener
+        this.camera.position.set(0, 1.7, 1);
+        this.camera.lookAt(0, 1.7, -10);
+        
+        // Update WebAudio API listener orientation and position
         if (window.audioCtx && window.listener) {
             window.listener.forwardX.value = 0;
             window.listener.forwardY.value = 0;
-            window.listener.forwardZ.value = -1; // Looking toward negative Z
+            window.listener.forwardZ.value = -1;
+            window.listener.positionX.value = 0;
+            window.listener.positionY.value = 1.7;
+            window.listener.positionZ.value = 0.5;
         }
+        
+        // Update the 2D view
+        this.updateTopdownView();
     }
 
     initTopdownView() {
@@ -792,7 +933,7 @@ class AudioVisualizer3D {
     
     updateTopdownView() {
         if (!this.topdownCtx || !this.topdownCanvas) return;
-        
+
         const ctx = this.topdownCtx;
         const width = this.topdownCanvas.width;
         const height = this.topdownCanvas.height;
@@ -828,14 +969,23 @@ class AudioVisualizer3D {
         ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
         ctx.stroke();
         
+        // Draw movement boundary circle
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 5]); // Dashed line
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius * (this.maxRadius / 7), 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]); // Reset dash pattern
+        
         // Define speaker positions with corrected gain node mappings
         const speakerPositions = [
-            { angle: 210, label: 5, gainNode: 4 }, // Speaker 1 (left front) - uses gain node 4
-            { angle: 150, label: 4, gainNode: 3 }, // Speaker 2 (right front) - uses gain node 3
-            { angle: 90, label: 3, gainNode: 2 },  // Speaker 3 (right) - unchanged
-            { angle: 30, label: 2, gainNode: 1 },  // Speaker 4 (right back) - uses gain node 1
-            { angle: 330, label: 1, gainNode: 0 }, // Speaker 5 (left back) - uses gain node 0
-            { angle: 270, label: 6, gainNode: 5 }  // Speaker 6 (left) - unchanged
+            { angle: 210, label: 5, gainNode: 4 },
+            { angle: 150, label: 4, gainNode: 3 },
+            { angle: 90, label: 3, gainNode: 2 },
+            { angle: 30, label: 2, gainNode: 1 },
+            { angle: 330, label: 1, gainNode: 0 },
+            { angle: 270, label: 6, gainNode: 5 }
         ];
         
         // Draw anticipation lanes first (so they're behind the speakers)
@@ -864,7 +1014,7 @@ class AudioVisualizer3D {
             // Add a pulsing glow for active speakers
             if (isActive) {
                 const gain = window.gainNodes[speaker.gainNode].gain.value;
-                const pulseSize = 20 + Math.sin(Date.now() / 200) * 5; // Pulsing effect
+                const pulseSize = 20 + Math.sin(Date.now() / 200) * 5;
                 const glowSize = 20 + pulseSize * gain;
                 
                 // Draw glow
@@ -886,49 +1036,53 @@ class AudioVisualizer3D {
             ctx.fillText(speaker.label, x, y);
         });
         
-        // Draw listener using the image
-        if (this.listenerImageLoaded) {
-            // Fallback if image isn't loaded yet
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, 6, 0, Math.PI * 2);
-            ctx.fill();
-        }
+        // Calculate listener position in 2D canvas coordinates
+        const scale = radius / 7; // Scale factor from 3D world to 2D canvas
+        const listenerCanvasX = centerX + this.listenerPosition.x * scale;
+        const listenerCanvasY = centerY - this.listenerPosition.z * scale; // Inverted Y
         
-        // Draw a clear white directional arrow with corrected rotation
-        // Use negative angle to make it rotate in the same direction as the 3D view
-        const angle = -this.rotationAngle;
-        const arrowLength = 30; // Make the arrow longer
-        const arrowWidth = 20;   // Make the arrow wider
-        
-        // Calculate arrow endpoint
-        const arrowX = centerX + Math.sin(angle) * arrowLength;
-        const arrowY = centerY - Math.cos(angle) * arrowLength;
-        
-        // Draw arrow stem with thicker white line
-        ctx.strokeStyle = '#FFFFFF';
-        ctx.lineWidth = 1;
+        // Draw listener position as a circle
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
         ctx.beginPath();
-        ctx.moveTo(centerX, centerY);
+        ctx.arc(listenerCanvasX, listenerCanvasY, 8, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Draw listener border
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(listenerCanvasX, listenerCanvasY, 8, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Draw directional arrow from listener position
+        const angle = -this.rotationAngle;
+        const arrowLength = 25;
+        
+        // Calculate arrow endpoint from listener position
+        const arrowX = listenerCanvasX + Math.sin(angle) * arrowLength;
+        const arrowY = listenerCanvasY - Math.cos(angle) * arrowLength;
+        
+        // Draw arrow stem
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(listenerCanvasX, listenerCanvasY);
         ctx.lineTo(arrowX, arrowY);
         ctx.stroke();
         
         // Draw arrowhead
-        const headLength = 20;
-        const headWidth = 10;
+        const headLength = 15;
+        const headWidth = 8;
         
-        // Calculate the arrow direction vector
         const dx = Math.sin(angle);
         const dy = -Math.cos(angle);
         
-        // Calculate points for arrowhead
         const arrowPoint1X = arrowX - headLength * dx + headWidth * dy;
         const arrowPoint1Y = arrowY - headLength * dy - headWidth * dx;
         
         const arrowPoint2X = arrowX - headLength * dx - headWidth * dy;
         const arrowPoint2Y = arrowY - headLength * dy + headWidth * dx;
         
-        // Draw arrowhead as a filled triangle
         ctx.fillStyle = '#FFFFFF';
         ctx.beginPath();
         ctx.moveTo(arrowX, arrowY);
