@@ -1139,13 +1139,17 @@ class AudioVisualizer3D {
         this.camera.position.set(x, y, z);
         
         // If we're at the center (audio engineer mode), look down slightly
-        if (x === 0 && z === 0) {
-            // Look at the floor slightly in front of us
-            this.camera.lookAt(0, 0, -1);
-        } else {
-            // Otherwise look at the center
-            this.camera.lookAt(0, y/2, 0);
-        }
+        this.camera.lookAt(0, 1.7, -10)
+        
+        // this.camera.lookAt(0, y/2, 0);
+
+        // if (x === 0 && z === 0) {
+        //     // Look at the floor slightly in front of us
+        //     this.camera.lookAt(0, 0, -1);
+        // } else {
+        //     // Otherwise look at the center
+        //     this.camera.lookAt(0, y/2, 0);
+        // }
     }
     
     /**
