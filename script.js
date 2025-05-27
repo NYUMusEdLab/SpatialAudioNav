@@ -1162,13 +1162,22 @@ function checkAudioFilesExist() {
 // Track which speaker keys are currently held down (engineer mode)
 let engineerSpeakerKeys = [false, false, false, false, false, false];
 
-// Engineer mode: handle keydown/keyup for speakers 1-6
+// Map keys to speaker indices for engineer mode
+const engineerKeyToSpeakerIndex = {
+    '1': 0, 'u': 0,
+    '2': 1, 'i': 1,
+    '3': 2, 'k': 2,
+    '4': 3, 'm': 3,
+    '5': 4, 'n': 4,
+    '6': 5, 'h': 5
+};
+
+// Engineer mode: handle keydown/keyup for speakers 1-6 and U/I/K/M/N/H
 function handleEngineerSpeakerKeys(e, isDown) {
     if (currentMode !== 'engineer') return;
-    // Only respond to keys '1'-'6'
-    const key = e.key;
-    if (key >= '1' && key <= '6') {
-        const idx = parseInt(key, 10) - 1;
+    const key = e.key.toLowerCase();
+    if (engineerKeyToSpeakerIndex.hasOwnProperty(key)) {
+        const idx = engineerKeyToSpeakerIndex[key];
         engineerSpeakerKeys[idx] = isDown;
         // Build pattern: 1 for pressed, 0 for not pressed
         const pattern = engineerSpeakerKeys.map(active => active ? 1 : 0);
