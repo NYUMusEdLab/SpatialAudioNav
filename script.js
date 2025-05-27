@@ -1050,6 +1050,33 @@ document.addEventListener('DOMContentLoaded', () => {
             setMixingMode(mixModeToggle.checked);
         });
     }
+
+    // Arabic visualization toggle
+    const toggleArabicBtn = document.getElementById('toggleArabicBtn');
+    const arabicContainer = document.getElementById('arabic-visualization-container');
+    
+    if (toggleArabicBtn && arabicContainer) {
+        // Initial state: If arabicContainer starts with display:none (as set in HTML),
+        // the button should not have the 'active' class (which it doesn't by default in HTML).
+        // The existing click listener logic will correctly add/remove 'active' class.
+        
+        toggleArabicBtn.addEventListener('click', function() {
+            if (arabicContainer.style.display === 'none') {
+                arabicContainer.style.display = 'block';
+                toggleArabicBtn.classList.add('active');
+            } else {
+                arabicContainer.style.display = 'none';
+                toggleArabicBtn.classList.remove('active');
+            }
+        });
+    } else {
+        if (!toggleArabicBtn) {
+            console.error("Error: toggleArabicBtn element not found. The button might not be interactive or styled as expected.");
+        }
+        if (!arabicContainer) {
+            console.error("Error: arabic-visualization-container element not found. Toggle functionality will be broken.");
+        }
+    }
     
     // Set up trivia button
     const triviaButton = document.getElementById('triviaButton');

@@ -251,6 +251,35 @@ input:checked + .slider:before {
     box-shadow: 0 0 15px rgba(230, 145, 56, 0.3);
 }
 
+/* Replace the current #toggleArabicBtn style with this */
+#toggleArabicBtn {
+    position: absolute;
+    top: 70px;
+    right: 160px; /* Move right to avoid overlap with #triviaButton */
+    width: 120px;
+    height: 40px;
+    background-color: rgba(51, 51, 51, 0.7);
+    color: white;
+    border: 1px solid #e69138;
+    border-radius: 4px;
+    cursor: pointer;
+    z-index: 9999; /* Increased to ensure always on top */
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+    padding: 8px 12px;
+    box-shadow: 0 0 10px rgba(230, 145, 56, 0.3);
+}
+
+#toggleArabicBtn:hover {
+    background-color: rgba(80, 80, 80, 0.9);
+}
+
+#toggleArabicBtn.active {
+    background-color: #e69138;
+    color: #000;
+    box-shadow: 0 0 15px rgba(230, 145, 56, 0.6);
+}
+
 #playPauseButton:hover, #resetButton:hover {
     transform: scale(1.1);
     box-shadow: 0 0 20px rgba(230, 145, 56, 0.6);

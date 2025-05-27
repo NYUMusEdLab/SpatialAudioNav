@@ -95,9 +95,7 @@
                 <option value="5">Speaker 6 (Left)</option>
             </select>
         </div>
-        
-        <!-- Mix Mode Toggle Removed as it's redundant with the mode buttons -->
-        
+
         <!-- Scene Selection -->
         <div class="scene-selector">
             <button class="scene-btn active" data-scene="default">Default</button>
@@ -105,6 +103,9 @@
             <button class="scene-btn" data-scene="transition3-4">Transition 3-4</button>
             <button class="scene-btn" data-scene="stropheV">Strophe V</button>
         </div>
+
+        <!-- Move the toggleArabicBtn here, before .topdown-view -->
+        <button id="toggleArabicBtn" title="Toggle Arabic Visualization">Toggle Vis</button>
         
         <div class="topdown-view">
             <div class="view-label">2D View</div>
@@ -135,7 +136,7 @@
                 <button class="trivia-nav" data-section="history">History</button>
             </div>
         </div>
-        
+
         <!-- Contour Display Toggle -->
         <!-- <div class="toggle-contour-view">
             <button data-view="contour" class="active">Contour</button>
@@ -157,7 +158,7 @@
         <!-- </div> --> 
 
         <!-- Arabic Visualization Container -->
-        <div id="arabic-visualization-container">
+        <div id="arabic-visualization-container" style="display: none;">
             <img id="arabic-visualization-image" src="images/ArabicVisualization.png" alt="Arabic Music Visualization">
             <div id="arabic-playhead"></div>
         </div>
