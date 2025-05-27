@@ -409,6 +409,20 @@ function connectAudioNodes() {
     masterGain.connect(audioCtx.destination);
 }
 
+// Abstracted function to play a pattern on speakers
+function playSpeaker(pattern) {
+    if (!gainNodes.length) return;
+    pattern.forEach((gain, idx) => {
+        if (gainNodes[idx]) {
+            gainNodes[idx].gain.setTargetAtTime(gain, audioCtx ? audioCtx.currentTime : 0, 0.1);
+        }
+    });
+    // Update 3D visualization if available
+    if (window.updateVisualization3D) {
+        window.updateVisualization3D(gainNodes);
+    }
+}
+
 // Simplified play/pause handler
 function togglePlayback() {
     // Check if audio element exists
@@ -564,13 +578,7 @@ function setInitialSpeakerGains() {
     //MANUAL ADJUSTMENT
     // const initialGains = [0.5, 0.3, 0.7, 0.4, 0.6, 0.2];
     const initialGains = [0.5, 0,0,0,0,0];
-    gainNodes.forEach((gainNode, index) => {
-        gainNode.gain.value = initialGains[index];
-    });
-    
-    if (window.updateVisualization3D) {
-        window.updateVisualization3D(gainNodes);
-    }
+    playSpeaker(initialGains);
 }
 
 // Function to update the position of the Arabic playhead
@@ -650,7 +658,7 @@ function handleSeek(event) {
 
     // Apply the pattern and update the current index
     currentPatternIndex = newIndex;
-    applyPattern(currentPatternIndex);
+    playSpeaker(timestampPatterns[currentScene].patterns[newIndex]);
 
     // Update 3D visualization as well
     if (window.updateVisualization3D) {
@@ -793,19 +801,13 @@ function updateDryWetBalance(currentTime) {
 // Apply a specific pattern
 function applyPattern(index) {
     if (!gainNodes.length) return;
-    
     const patterns = timestampPatterns[currentScene].patterns;
     if (!patterns || !patterns[index]) return;
-    
     const pattern = patterns[index];
-    pattern.forEach((gain, idx) => {
-        if (gainNodes[idx]) {
-            // If in mixing mode and not performer mode, only apply pattern if not manually set
-            if (!isMixingMode || currentMode === 'performer') {
-                gainNodes[idx].gain.setTargetAtTime(gain, audioCtx.currentTime, 0.1);
-            }
-        }
-    });
+    // If in mixing mode and not performer mode, only apply pattern if not manually set
+    if (!isMixingMode || currentMode === 'performer') {
+        playSpeaker(pattern);
+    }
 }
 
 // Function to change the mode (engineer, audience, performer)
