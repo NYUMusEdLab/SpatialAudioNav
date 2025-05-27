@@ -804,9 +804,12 @@ function applyPattern(index) {
     const patterns = timestampPatterns[currentScene].patterns;
     if (!patterns || !patterns[index]) return;
     const pattern = patterns[index];
-    // If in mixing mode and not performer mode, only apply pattern if not manually set
-    if (!isMixingMode || currentMode === 'performer') {
-        playSpeaker(pattern);
+    // Only apply pattern if NOT in engineer mode
+    if (currentMode !== 'engineer') {
+        // If in mixing mode and not performer mode, only apply pattern if not manually set
+        if (!isMixingMode || currentMode === 'performer') {
+            playSpeaker(pattern);
+        }
     }
 }
 
@@ -1154,4 +1157,121 @@ function checkAudioFilesExist() {
                 console.log(`? Cannot verify audio file (CORS): ${element.src}`);
             });
     });
+}
+
+// Track which speaker keys are currently held down (engineer mode)
+let engineerSpeakerKeys = [false, false, false, false, false, false];
+
+// Engineer mode: handle keydown/keyup for speakers 1-6
+function handleEngineerSpeakerKeys(e, isDown) {
+    if (currentMode !== 'engineer') return;
+    // Only respond to keys '1'-'6'
+    const key = e.key;
+    if (key >= '1' && key <= '6') {
+        const idx = parseInt(key, 10) - 1;
+        engineerSpeakerKeys[idx] = isDown;
+        // Build pattern: 1 for pressed, 0 for not pressed
+        const pattern = engineerSpeakerKeys.map(active => active ? 1 : 0);
+        playSpeaker(pattern);
+        // Prevent default to avoid unwanted browser shortcuts
+        e.preventDefault();
+    }
+}
+
+// Listen for keydown/keyup globally
+window.addEventListener('keydown', (e) => handleEngineerSpeakerKeys(e, true));
+window.addEventListener('keyup', (e) => handleEngineerSpeakerKeys(e, false));
+
+// When leaving engineer mode, reset speaker keys and pattern
+function resetEngineerSpeakerKeys() {
+    engineerSpeakerKeys = [false, false, false, false, false, false];
+}
+
+// Function to change the mode (engineer, audience, performer)
+function setMode(mode) {
+    if (!['engineer', 'audience', 'performer'].includes(mode)) return;
+    
+    currentMode = mode;
+    updateListenerPosition();
+    
+    // Update UI
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === mode);
+    });
+    
+    // Show/hide performer-specific UI
+    const performerDropdown = document.getElementById('performer-dropdown-container');
+    if (performerDropdown) {
+        performerDropdown.style.display = mode === 'performer' ? 'block' : 'none';
+    }
+    
+    // Disable manual controls in performer mode
+    if (mode === 'performer') {
+        const mixModeToggle = document.querySelector('#mixModeToggle');
+        if (mixModeToggle) {
+            mixModeToggle.checked = false;
+            isMixingMode = false;
+        }
+    }
+    
+    // Handle view swapping for different modes
+    const sceneContainer = document.getElementById('scene-container');
+    const topdownView = document.querySelector('.topdown-view');
+    
+    if (sceneContainer && topdownView) {
+        // In engineer mode, make 2D view bigger and 3D view smaller
+        if (mode === 'engineer') {
+            sceneContainer.classList.add('minimized');
+            topdownView.classList.add('expanded');
+        } else {
+            sceneContainer.classList.remove('minimized');
+            topdownView.classList.remove('expanded');
+        }
+        
+        // Force a resize event after a short delay to ensure proper rendering after class changes
+        setTimeout(() => {
+            window.dispatchEvent(new Event('resize'));
+        }, 50);
+    }
+    
+    // Reset view in 3D visualization
+    if (window.visualizer3D) {
+        window.visualizer3D.resetOrientation();
+        
+        // For audience mode, move back
+        if (mode === 'audience' && window.visualizer3D.moveCamera) {
+            window.visualizer3D.moveCamera(0, 1.7, 0.5);
+        } 
+        // if (mode === 'audience' && window.visualizer3D.moveCamera) {
+        //     window.visualizer3D.moveCamera(0, 1.7, 2);
+        // } 
+        
+        // For engineer mode, position higher looking down
+        else if (mode === 'engineer' && window.visualizer3D.moveCamera) {
+            window.visualizer3D.moveCamera(0, 2.5, 0); // Lower height to keep things visible
+        }
+        // For performer mode, position at the selected speaker
+        else if (mode === 'performer' && window.visualizer3D.moveToSpeakerPosition) {
+            window.visualizer3D.moveToSpeakerPosition(currentPerformerSpeakerIndex);
+        }
+    }
+    
+    // Reset engineer speaker keys when changing mode
+    if (mode !== 'engineer') {
+        resetEngineerSpeakerKeys();
+    }
+    
+    // Update the pattern for current time position
+    if (!currentAudioElement.paused) {
+        const currentTime = currentAudioElement.currentTime;
+        
+        const timestamps = timestampPatterns[currentScene].timestamps;
+        let newIndex = timestamps.findIndex((timestamp, index) => {
+            const nextTimestamp = timestamps[index + 1] || Infinity;
+            return currentTime >= timestamp && currentTime < nextTimestamp;
+        });
+        
+        if (newIndex === -1) newIndex = 0;
+        applyPattern(newIndex);
+    }
 }
