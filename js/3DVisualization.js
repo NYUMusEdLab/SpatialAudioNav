@@ -1039,8 +1039,9 @@ class AudioVisualizer3D {
         // Calculate listener position in 2D canvas coordinates
         const scale = radius / 7; // Scale factor from 3D world to 2D canvas
         const listenerCanvasX = centerX + this.listenerPosition.x * scale;
-        const listenerCanvasY = centerY - this.listenerPosition.z * scale; // Inverted Y
-        
+        // Fix: Use + instead of - for correct forward/backward mapping
+        const listenerCanvasY = centerY + this.listenerPosition.z * scale; // Corrected Y
+
         // Draw listener position as a circle
         ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
         ctx.beginPath();
