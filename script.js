@@ -27,6 +27,9 @@ let dryWetMixer = null;
 let wetGain = null;
 let dryGain = null;
 
+// Track which audio elements have already been connected to sources
+let connectedAudioElements = new Set();
+
 // Audio elements
 let audioElements = {};
 let currentAudioElement = null;
@@ -68,12 +71,38 @@ const timestampPatterns = {
         ]
     },
     "transition1-2": {
-        timestamps: [0, 1.2, 2.4, 3.6, 4.8, 6.0, 7.2, 8.4, 9.6, 10.8],
+        timestamps: [
+            0.000, 8.238, 8.657, 10.897, 11.442, 12.834, 13.283, 16.761, 
+            17.966, 18.536, 19.240, 21.339, 22.231, 26.715, 27.833, 
+            29.779, 30.296, 38.051, 38.437, 40.586, 41.628, 47.053, 
+            47.710, 56.151, 56.929
+        ],
         patterns: [
-            [1, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0],
-            [0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 1, 0], [0, 1, 0, 1, 0, 0], [0, 0, 1, 0, 0, 1],
-            [1, 1, 1, 1, 1, 1]
+            [1, 1, 1, 1, 1, 1], // all
+            [0, 0, 0, 0, 0, 1], // 6
+            [0, 0, 0, 0, 0, 1], // 6
+            [0, 0, 0, 0, 1, 0], // 5
+            [0, 0, 0, 0, 1, 0], // 5
+            [0, 1, 0, 0, 0, 0], // 2
+            [0, 1, 0, 0, 0, 0], // 2
+            [0, 0, 1, 0, 0, 0], // 3
+            [0, 0, 1, 0, 0, 0], // 3
+            [0, 0, 0, 1, 0, 0], // 4
+            [0, 0, 0, 1, 0, 0], // 4
+            [1, 0, 0, 0, 0, 0], // 1
+            [1, 0, 0, 0, 0, 0], // 1
+            [0, 1, 0, 0, 0, 0], // 2
+            [0, 1, 0, 0, 0, 0], // 2
+            [1, 0, 0, 0, 0, 0], // 1
+            [1, 0, 0, 0, 0, 0], // 1
+            [0, 0, 1, 0, 0, 0], // 3
+            [0, 0, 1, 0, 0, 0], // 3
+            [0, 0, 0, 0, 1, 0], // 5
+            [0, 0, 0, 0, 1, 0], // 5
+            [0, 0, 0, 0, 0, 1], // 6
+            [0, 0, 0, 0, 0, 1], // 6
+            [0, 0, 0, 1, 0, 0], // 4
+            [0, 0, 0, 1, 0, 0]  // 4
         ]
     },
     "transition3-4": {
@@ -242,27 +271,44 @@ function setupWebAudio() {
             reject(new Error("Missing AudioContext or audio element"));
             return;
         }
-        
-        // Create audio source from element
+
+        // --- FIX: Always create a fresh <audio> element for the current scene ---
+        // This avoids the "already connected" error by ensuring a new HTMLMediaElement each time.
+        // Remove the old element from DOM if it exists
+        if (currentAudioElement && currentAudioElement.parentNode) {
+            currentAudioElement.parentNode.removeChild(currentAudioElement);
+        }
+        // Create a new audio element with the same src as the scene's audio
+        const newAudio = document.createElement('audio');
+        newAudio.id = currentScene;
+        newAudio.src = audioElements[currentScene].src;
+        newAudio.preload = "auto";
+        newAudio.crossOrigin = "anonymous";
+        // Insert the new audio element into the DOM (so MediaElementSource works)
+        document.body.appendChild(newAudio);
+        // Update references
+        audioElements[currentScene] = newAudio;
+        currentAudioElement = newAudio;
+        window.audioElement = currentAudioElement;
+
+        // Now create the MediaElementSourceNode for the new element
         try {
             audioSource = audioCtx.createMediaElementSource(currentAudioElement);
+            connectedAudioElements.add(currentAudioElement);
+            
+            // Continue with the rest of the setup
+            createAudioGraph().then(resolve).catch(reject);
         } catch (e) {
             console.error("Error creating media element source:", e);
-            
-            // If already connected, just resolve
-            if (e.message && e.message.includes('already connected')) {
-                console.log("Audio element already connected to an audio context");
-                resolve();
-                return;
-            }
-            
             reject(e);
             return;
         }
-        
-        console.log("Audio source created successfully");
-        
-        // Create spatial audio setup
+    });
+}
+
+// Function to create the audio graph (extracted from setupWebAudio for clarity)
+function createAudioGraph() {
+    return new Promise((resolve, reject) => {
         try {
             // Create 6 audio sources in a hexagonal arrangement
             const speakerRadius = 7;
@@ -296,7 +342,6 @@ function setupWebAudio() {
             connectAudioNodes();
             
             // Set initial gains
-            // MANUAL ADJUSTMENT
             setInitialSpeakerGains();
             
             console.log("Spatial audio setup complete");
@@ -728,7 +773,9 @@ function startSpecialEffects() {
 
 // Stop special effects animations
 function stopSpecialEffects() {
-    circularPanner.active = false;
+    if (circularPanner) {
+        circularPanner.active = false;
+    }
     
     if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
@@ -882,6 +929,11 @@ function setMode(mode) {
         }
     }
     
+    // Reset engineer speaker keys when changing mode
+    if (mode !== 'engineer') {
+        resetEngineerSpeakerKeys();
+    }
+    
     // Update the pattern for current time position
     if (!currentAudioElement.paused) {
         const currentTime = currentAudioElement.currentTime;
@@ -905,67 +957,97 @@ function setScene(scene) {
     stopPatternSwitching();
     stopSpecialEffects();
     
+    // Always pause current audio
+    if (currentAudioElement) {
+        currentAudioElement.pause();
+    }
+    
+    // Update scene 
     currentScene = scene;
     
     // Update global variables for access from other components
     window.timestamps = timestampPatterns[scene].timestamps;
     window.presets = timestampPatterns[scene].patterns;
     
-    // Update audio source
-    const wasPlaying = currentAudioElement && !currentAudioElement.paused;
+    // Remember if we were playing
+    const wasPlaying = playPauseButton.dataset.playing === 'true';
     
+    // Reset UI state
+    playPauseButton.dataset.playing = 'false';
+    playPauseButton.style.setProperty('--play-pause-icon', '"\\25B6"');
+    playPauseButton.title = "Play Audio";
+    
+    // Update to new audio element
     currentAudioElement = audioElements[scene];
     window.audioElement = currentAudioElement;
     
-    // Reset time position
+    // Always reset time position
     currentAudioElement.currentTime = 0;
     currentPatternIndex = 0;
-    updateArabicPlayhead(); // Reset playhead on scene change
-
-    // Reconnect audio nodes for the new scene
+    updateArabicPlayhead();
+    
+    // If audio was initialized, need to recreate the audio context
     if (audioInitialized) {
-        // Create a new source for the new audio element
-        if (audioSource) {
-            try {
-                audioSource.disconnect();
-            } catch (e) {
-                // Ignore disconnect errors
+        // Close existing audio context
+        if (audioCtx) {
+            // Disconnect all audio nodes
+            if (audioSource) {
+                try { audioSource.disconnect(); } catch (e) {}
             }
-        }
-        
-        try {
-            audioSource = audioCtx.createMediaElementSource(currentAudioElement);
-        } catch (e) {
-            // If already connected, just update connections
-            if (e.message && e.message.includes('already connected')) {
-                console.log("Audio element already connected, updating routing");
-            } else {
-                console.error("Error creating media element source:", e);
+            
+            panners.forEach(panner => {
+                try { panner.disconnect(); } catch (e) {}
+            });
+            
+            gainNodes.forEach(gain => {
+                try { gain.disconnect(); } catch (e) {}
+            });
+            
+            if (masterGain) {
+                try { masterGain.disconnect(); } catch (e) {}
             }
+            
+            // Close the audio context - this will clean up all resources
+            audioCtx.close().then(() => {
+                console.log("Audio context closed successfully");
+                
+                // Create a new audio context
+                audioCtx = new AudioContext({ latencyHint: 'interactive' });
+                window.audioCtx = audioCtx;
+                window.listener = audioCtx.listener;
+                
+                // Reset our tracking of connected elements
+                connectedAudioElements.clear();
+                
+                // Set up the audio system from scratch
+                setupWebAudio().then(() => {
+                    // Update UI to show the correct scene
+                    document.querySelectorAll('.scene-btn').forEach(btn => {
+                        btn.classList.toggle('active', btn.dataset.scene === scene);
+                    });
+                    
+                    // If we were playing before, start playing the new scene
+                    if (wasPlaying) {
+                        setTimeout(() => {
+                            togglePlayback();
+                        }, 100);
+                    }
+                });
+            }).catch(e => {
+                console.error("Error closing audio context:", e);
+                
+                // Even if closing fails, continue with UI updates
+                document.querySelectorAll('.scene-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.scene === scene);
+                });
+            });
         }
-        
-        // Update audio routing
-        connectAudioNodes();
-        applyPattern(currentPatternIndex);
+    } else {
+        // Just update UI if audio not initialized
+        document.querySelectorAll('.scene-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.scene === scene);
+        });
     }
-    
-    // Update UI
-    document.querySelectorAll('.scene-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.scene === scene);
-    });
-    
-    // Resume playback if needed
-    if (wasPlaying) {
-        currentAudioElement.play()
-            .then(() => {
-                startPatternSwitching();
-                startSpecialEffects();
-            })
-            .catch(e => console.error("Error playing new audio scene:", e));
-    }
-    
-    // Show trivia for the current scene
-    showSceneTrivia(scene);
 }
 
 // Function to toggle mixing mode
