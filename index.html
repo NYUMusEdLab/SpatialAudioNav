@@ -51,6 +51,86 @@
             /* border: 1px dashed #ffcc00; */
             /* padding: 0.5em; */
         }
+
+        /* Volume Display Panel Styles */
+        #volume-display-panel {
+            position: absolute;
+            top: 10%;
+            right: 5%;
+            width: 300px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            border-radius: 8px;
+            padding: 1em;
+            z-index: 20;
+            display: none; /* Hidden by default */
+        }
+
+        .volume-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1em;
+        }
+
+        .volume-panel-header h3 {
+            margin: 0;
+            font-size: 1.5em;
+        }
+
+        .close-panel {
+            background: none;
+            border: none;
+            color: #ffcc00;
+            font-size: 1.2em;
+            cursor: pointer;
+        }
+
+        .volume-bars-container {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .volume-bar-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5em;
+        }
+
+        .speaker-label {
+            width: 80px;
+            font-size: 1.1em;
+        }
+
+        .volume-bar-wrapper {
+            flex-grow: 1;
+            margin-right: 0.5em;
+            position: relative;
+        }
+
+        .volume-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(255, 204, 0, 0.3);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .volume-fill {
+            height: 100%;
+            background: #ffcc00;
+            border-radius: 10px;
+            transition: width 0.3s;
+        }
+
+        .volume-percentage {
+            position: absolute;
+            top: 0;
+            right: 5px;
+            font-size: 0.9em;
+            line-height: 20px;
+            color: #fff;
+        }
     </style>
 </head>
 <body>
@@ -107,6 +187,9 @@
         <!-- Move the toggleArabicBtn here, before .topdown-view -->
         <button id="toggleArabicBtn" title="Toggle Arabic Visualization">Toggle Vis</button>
         
+        <!-- Add Volume Display Toggle Button -->
+        <button id="volumeDisplayBtn" title="Toggle Volume Display" style="display: none;">Volume</button>
+        
         <div class="topdown-view">
             <div class="view-label">2D View</div>
             <canvas id="topdown-canvas"></canvas>
@@ -141,6 +224,70 @@
         <div id="arabic-visualization-container" style="display: none;">
             <img id="arabic-visualization-image" src="images/ArabicVisualization.png" alt="Arabic Music Visualization">
             <div id="arabic-playhead"></div>
+        </div>
+
+        <!-- Volume Display Panel -->
+        <div id="volume-display-panel" style="display: none;">
+            <div class="volume-panel-header">
+                <h3>Speaker Volumes</h3>
+                <button id="closeVolumePanel" class="close-panel">&times;</button>
+            </div>
+            <div class="volume-bars-container">
+                <div class="volume-bar-group" data-speaker="0">
+                    <div class="speaker-label">Speaker 1</div>
+                    <div class="volume-bar-wrapper">
+                        <div class="volume-bar">
+                            <div class="volume-fill"></div>
+                        </div>
+                        <div class="volume-percentage">50%</div>
+                    </div>
+                </div>
+                <div class="volume-bar-group" data-speaker="1">
+                    <div class="speaker-label">Speaker 2</div>
+                    <div class="volume-bar-wrapper">
+                        <div class="volume-bar">
+                            <div class="volume-fill"></div>
+                        </div>
+                        <div class="volume-percentage">50%</div>
+                    </div>
+                </div>
+                <div class="volume-bar-group" data-speaker="2">
+                    <div class="speaker-label">Speaker 3</div>
+                    <div class="volume-bar-wrapper">
+                        <div class="volume-bar">
+                            <div class="volume-fill"></div>
+                        </div>
+                        <div class="volume-percentage">50%</div>
+                    </div>
+                </div>
+                <div class="volume-bar-group" data-speaker="3">
+                    <div class="speaker-label">Speaker 4</div>
+                    <div class="volume-bar-wrapper">
+                        <div class="volume-bar">
+                            <div class="volume-fill"></div>
+                        </div>
+                        <div class="volume-percentage">50%</div>
+                    </div>
+                </div>
+                <div class="volume-bar-group" data-speaker="4">
+                    <div class="speaker-label">Speaker 5</div>
+                    <div class="volume-bar-wrapper">
+                        <div class="volume-bar">
+                            <div class="volume-fill"></div>
+                        </div>
+                        <div class="volume-percentage">50%</div>
+                    </div>
+                </div>
+                <div class="volume-bar-group" data-speaker="5">
+                    <div class="speaker-label">Speaker 6</div>
+                    <div class="volume-bar-wrapper">
+                        <div class="volume-bar">
+                            <div class="volume-fill"></div>
+                        </div>
+                        <div class="volume-percentage">50%</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     

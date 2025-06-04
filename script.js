@@ -156,6 +156,9 @@ const playPauseButton = document.getElementById('playPauseButton');
 const resetButton = document.getElementById('resetButton');
 const arabicPlayhead = document.getElementById('arabic-playhead'); // Get the new playhead element
 const arabicContainer = document.getElementById('arabic-visualization-container'); // Get the container
+const volumeDisplayPanel = document.getElementById('volume-display-panel');
+const volumeDisplayBtn = document.getElementById('volumeDisplayBtn');
+const closeVolumePanel = document.getElementById('closeVolumePanel');
 
 if (!playPauseButton) console.error("Play/Pause button not found!");
 if (!resetButton) console.error("Reset button not found!");
@@ -616,14 +619,35 @@ document.addEventListener('click', event => {
     }
 });
 
+// Track speaker states for transition1-2
+let t12SpeakerStates = null; // null or array of { state: "idle"|"active"|"decaying" }
+
+function resetT12SpeakerStates() {
+    t12SpeakerStates = Array(6).fill().map(() => ({ state: "idle" }));
+}
+
 // Set initial gain values
 // MANUAL ADJUSTMENT
 function setInitialSpeakerGains() {
     if (!gainNodes.length) return;
-    //MANUAL ADJUSTMENT
-    // const initialGains = [0.5, 0.3, 0.7, 0.4, 0.6, 0.2];
-    const initialGains = [0.5, 0,0,0,0,0];
-    playSpeaker(initialGains);
+    
+    if (currentScene === "transition1-2") {
+        // All speakers start at 0.5 for transition1-2
+        const initialGains = [0.5, 0.5, 0.5, 0.5, 0.5, 0.5];
+        gainNodes.forEach((gain, idx) => {
+            gain.gain.setValueAtTime(initialGains[idx], audioCtx.currentTime);
+        });
+        resetT12SpeakerStates();
+        // Update 3D visualization if available
+        if (window.updateVisualization3D) {
+            window.updateVisualization3D(gainNodes);
+        }
+    } else {
+        //MANUAL ADJUSTMENT
+        // const initialGains = [0.5, 0.3, 0.7, 0.4, 0.6, 0.2];
+        const initialGains = [0.5, 0,0,0,0,0];
+        playSpeaker(initialGains);
+    }
 }
 
 // Function to update the position of the Arabic playhead
@@ -719,6 +743,11 @@ function startPatternSwitching() {
 
         // Update Arabic playhead position
         updateArabicPlayhead();
+        
+        // Update volume display for transition1-2
+        if (currentScene === "transition1-2") {
+            updateVolumeDisplay();
+        }
 
         // Special handling for Transition 3-4 (circular panning)
         if (currentScene === 'transition3-4') {
@@ -851,11 +880,107 @@ function applyPattern(index) {
     const patterns = timestampPatterns[currentScene].patterns;
     if (!patterns || !patterns[index]) return;
     const pattern = patterns[index];
+    
+    // Special handling for transition1-2
+    if (currentScene === "transition1-2") {
+        // Initialize state if needed
+        if (!t12SpeakerStates || t12SpeakerStates.length !== 6) {
+            resetT12SpeakerStates();
+        }
+
+        // For each speaker, determine state transitions
+        for (let i = 0; i < 6; i++) {
+            const isActive = !!pattern[i];
+            const prevState = t12SpeakerStates[i].state;
+
+            if (isActive && prevState === "idle") {
+                // First activation: ramp up to 1.0
+                gainNodes[i].gain.cancelScheduledValues(audioCtx.currentTime);
+                gainNodes[i].gain.setTargetAtTime(1.0, audioCtx.currentTime, 0.1);
+                t12SpeakerStates[i].state = "active";
+            } else if (!isActive && prevState === "active") {
+                // Deactivation: decay to 0.5
+                gainNodes[i].gain.cancelScheduledValues(audioCtx.currentTime);
+                gainNodes[i].gain.setTargetAtTime(0.5, audioCtx.currentTime, 0.3);
+                t12SpeakerStates[i].state = "decaying";
+            } else if (!isActive && (prevState === "idle" || prevState === "decaying")) {
+                // Stay at 0.5
+                gainNodes[i].gain.cancelScheduledValues(audioCtx.currentTime);
+                gainNodes[i].gain.setTargetAtTime(0.5, audioCtx.currentTime, 0.05);
+                t12SpeakerStates[i].state = "idle";
+            } else if (isActive && prevState === "active") {
+                // Still active, keep at 1.0
+                gainNodes[i].gain.cancelScheduledValues(audioCtx.currentTime);
+                gainNodes[i].gain.setTargetAtTime(1.0, audioCtx.currentTime, 0.05);
+            } else if (isActive && prevState === "decaying") {
+                // Reactivation from decaying state: ramp back up to 1.0
+                gainNodes[i].gain.cancelScheduledValues(audioCtx.currentTime);
+                gainNodes[i].gain.setTargetAtTime(1.0, audioCtx.currentTime, 0.1);
+                t12SpeakerStates[i].state = "active";
+            }
+        }
+        
+        // Update volume display for transition1-2
+        updateVolumeDisplay();
+        
+        // Update 3D visualization if available
+        if (window.updateVisualization3D) {
+            window.updateVisualization3D(gainNodes);
+        }
+        return;
+    }
+    
     // Only apply pattern if NOT in engineer mode
     if (currentMode !== 'engineer') {
         // If in mixing mode and not performer mode, only apply pattern if not manually set
         if (!isMixingMode || currentMode === 'performer') {
             playSpeaker(pattern);
+        }
+    }
+}
+
+// Function to update volume display panel
+function updateVolumeDisplay() {
+    if (!volumeDisplayPanel || currentScene !== "transition1-2") return;
+    
+    if (!gainNodes || gainNodes.length < 6) return;
+    
+    for (let i = 0; i < 6; i++) {
+        const volumeGroup = document.querySelector(`.volume-bar-group[data-speaker="${i}"]`);
+        if (!volumeGroup) continue;
+        
+        const volumeFill = volumeGroup.querySelector('.volume-fill');
+        const volumePercentage = volumeGroup.querySelector('.volume-percentage');
+        
+        if (!volumeFill || !volumePercentage) continue;
+        
+        const gain = gainNodes[i].gain.value;
+        const percentage = Math.round(gain * 100);
+        
+        // Update the height of the volume bar
+        volumeFill.style.height = `${percentage}%`;
+        
+        // Update the percentage text
+        volumePercentage.textContent = `${percentage}%`;
+        
+        // Update active state for visual feedback
+        volumeGroup.setAttribute('data-active', gain > 0.6 ? 'true' : 'false');
+    }
+}
+
+// Function to show/hide volume display controls based on scene
+function toggleVolumeDisplayVisibility(scene) {
+    const shouldShow = scene === "transition1-2";
+    
+    if (volumeDisplayBtn) {
+        volumeDisplayBtn.style.display = shouldShow ? 'block' : 'none';
+    }
+    
+    // Auto-hide panel when switching away from transition1-2
+    if (!shouldShow && volumeDisplayPanel) {
+        volumeDisplayPanel.style.display = 'none';
+        if (volumeDisplayBtn) {
+            volumeDisplayBtn.classList.remove('active');
         }
     }
 }
@@ -964,6 +1089,14 @@ function setScene(scene) {
     
     // Update scene 
     currentScene = scene;
+    
+    // Reset transition1-2 states when switching to it
+    if (scene === "transition1-2") {
+        resetT12SpeakerStates();
+    }
+    
+    // Toggle volume display visibility based on scene
+    toggleVolumeDisplayVisibility(scene);
     
     // Update global variables for access from other components
     window.timestamps = timestampPatterns[scene].timestamps;
@@ -1199,6 +1332,32 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+    
+    // Set up volume display controls
+    if (volumeDisplayBtn) {
+        volumeDisplayBtn.addEventListener('click', () => {
+            if (volumeDisplayPanel) {
+                const isVisible = volumeDisplayPanel.style.display === 'block';
+                volumeDisplayPanel.style.display = isVisible ? 'none' : 'block';
+                volumeDisplayBtn.classList.toggle('active', !isVisible);
+                
+                if (!isVisible) {
+                    updateVolumeDisplay(); // Update display when showing
+                }
+            }
+        });
+    }
+    
+    if (closeVolumePanel) {
+        closeVolumePanel.addEventListener('click', () => {
+            if (volumeDisplayPanel) {
+                volumeDisplayPanel.style.display = 'none';
+                if (volumeDisplayBtn) {
+                    volumeDisplayBtn.classList.remove('active');
+                }
+            }
+        });
+    }
     
     // Initialize mode and scene
     setMode('audience');

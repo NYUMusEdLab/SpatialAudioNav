@@ -630,179 +630,162 @@ input:checked + .slider:before {
     margin-top: 20px;
 }
 
-/* Mobile Optimization */
+/* Volume Display Panel Styles */
+#volume-display-panel {
+    position: absolute;
+    top: 100px;
+    right: 30px;
+    width: 320px;
+    background: rgba(0, 0, 0, 0.85);
+    color: #fff;
+    border: 2px solid #e69138;
+    border-radius: 12px;
+    padding: 15px;
+    z-index: 120;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.volume-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 8px;
+}
+
+.volume-panel-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #e69138;
+    font-weight: bold;
+}
+
+.close-panel {
+    background: none;
+    border: none;
+    color: #e69138;
+    font-size: 24px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.close-panel:hover {
+    transform: rotate(90deg);
+}
+
+.volume-bars-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+}
+
+.volume-bar-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.volume-bar-wrapper {
+    width: 30px;
+    height: 120px;
+    position: relative;
+}
+
+.volume-bar {
+    width: 100%;
+    height: 100%;
+    background: #2a2a2a;
+    border-radius: 15px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.volume-fill {
+    background: linear-gradient(to top, #e69138, #ffb84d);
+    width: 100%;
+    height: 50%; /* Default starting at 50% */
+    position: absolute;
+    bottom: 0;
+    border-radius: 0 0 15px 15px;
+    transition: height 0.3s ease;
+}
+
+.volume-bar-group[data-active="true"] .volume-fill {
+    background: linear-gradient(to top, #ff6b35, #ff8c42);
+    box-shadow: 0 0 15px rgba(255, 107, 53, 0.5);
+    animation: pulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes pulse {
+    from { box-shadow: 0 0 10px rgba(255, 107, 53, 0.5); }
+    to { box-shadow: 0 0 20px rgba(255, 107, 53, 0.8); }
+}
+
+.volume-percentage {
+    position: absolute;
+    bottom: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    color: #e69138;
+    font-weight: bold;
+}
+
+.speaker-label {
+    font-size: 13px;
+    color: #e69138;
+    font-weight: bold;
+}
+
+/* Volume Display Toggle Button */
+#volumeDisplayBtn {
+    position: absolute;
+    top: 70px;
+    right: 70px;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.7);
+    color: #e69138;
+    border: 1px solid #e69138;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    z-index: 110;
+    transition: all 0.2s ease;
+}
+
+#volumeDisplayBtn:hover {
+    background: rgba(230, 145, 56, 0.2);
+}
+
+#volumeDisplayBtn.active {
+    background: #e69138;
+    color: #000;
+}
+
+/* Mobile optimization for volume panel */
 @media (max-width: 768px) {
-    .mode-selector, .mix-mode-toggle, .scene-selector {
-        left: 10px;
-        padding: 5px;
+    #volume-display-panel {
+        top: 60px;
+        right: 10px;
+        width: 280px;
+        padding: 10px;
     }
     
-    .mode-selector {
-        top: 10px;
+    .volume-bars-container {
+        grid-template-columns: repeat(2, 1fr);
     }
     
-    .mix-mode-toggle {
-        top: 65px;
-    }
-    
-    .scene-selector {
-        top: 110px;
-    }
-    
-    .mode-btn, .scene-btn {
-        padding: 4px 8px;
-        font-size: 11px;
-    }
-    
-    #joystick-container {
-        bottom: 220px;
-        right: 30px;
-        width: 100px;
+    .volume-bar-wrapper {
         height: 100px;
     }
     
-    .audio-controls {
-        bottom: 220px;
-        left: 20px;
-    }
-    
-    #playPauseButton, #resetButton {
-        width: 50px;
-        height: 50px;
-    }
-    
-    .topdown-view {
-        width: 160px;
-        height: 160px;
-        top: 60px;
+    #volumeDisplayBtn {
+        top: 100px;
         right: 10px;
-    }
-    
-    #triviaButton {
-        top: 10px;
-        right: 10px;
-        width: 30px;
-        height: 30px;
-        font-size: 16px;
-    }
-    
-    .music-visualization-container {
-        height: 150px;
-    }
-    
-    .trivia-container {
-        width: 95%;
-        height: 90%;
-    }
-    
-    .toggle-contour-view {
-        bottom: 160px;
-    }
-    
-    .performer-view {
-        bottom: 160px;
-        height: 80px;
-    }
-    
-    .performer-cue {
-        font-size: 20px;
-        margin-top: 10px;
-    }
-    
-    #arabic-visualization-container {
-        width: 95%; /* Adjust width for smaller screens */
-        height: 160px; /* Adjusted height from 80px to 160px */
-        bottom: 30px; /* Adjust bottom position for mobile */
-    }
-
-    .notation-image {
-        height: 130px;
-    }
-}
-
-/* Performer Dropdown Styling */
-.performer-dropdown {
-    position: absolute;
-    top: 20px;
-    left: 220px;
-    padding: 10px;
-    background-color: rgba(0, 0, 0, 0.7);
-    border: 1px solid #e69138;
-    border-radius: 5px;
-    z-index: 100;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.performer-dropdown label {
-    color: #e69138;
-    font-size: 14px;
-}
-
-.performer-dropdown select {
-    background-color: #333;
-    color: #fff;
-    border: 1px solid #e69138;
-    padding: 5px;
-    border-radius: 3px;
-    outline: none;
-}
-
-.performer-dropdown select:focus {
-    box-shadow: 0 0 0 2px rgba(230, 145, 56, 0.5);
-}
-
-/* View sizing for different modes */
-#scene-container.minimized {
-    position: absolute;
-    top: 10px;
-    right: 10px; /* Position in top-right corner instead of left */
-    left: auto;
-    width: 300px;
-    height: 225px; /* 4:3 aspect ratio for better visibility */
-    border: 1px solid #e69138;
-    border-radius: 10px;
-    overflow: hidden;
-    z-index: 150;
-}
-
-.topdown-view.expanded {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 70%;
-    height: 70%;
-    max-width: 800px;
-    max-height: 800px;
-    background-color: rgba(0, 0, 0, 0.7);
-    border-radius: 10px;
-    padding: 20px;
-    z-index: 100;
-}
-
-.topdown-view.expanded .view-label {
-    font-size: 20px;
-    margin-bottom: 10px;
-}
-
-/* Adjust for smaller screens */
-@media (max-width: 768px) {
-    .performer-dropdown {
-        top: 60px;
-        left: 20px;
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
-    #scene-container.minimized {
-        width: 150px;
-        height: 150px;
-    }
-    
-    .topdown-view.expanded {
-        width: 90%;
-        height: 60%;
+        font-size: 12px;
+        padding: 6px 10px;
     }
 }
