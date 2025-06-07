@@ -817,3 +817,54 @@ input:checked + .slider:before {
         padding: 6px 10px;
     }
 }
+
+/* Speaker Picker (Performer Mode) Styles */
+/* TODO: The visibility of #speaker-picker-container should be controlled by JS based on the current mode.
+   Example: Add/remove a 'hidden' class.
+.hidden {
+    display: none !important;
+}
+*/
+#speaker-picker-container {
+    /* Position is set by JS (top: 10px, right: 150px, z-index: 1000) */
+    /* Background, color, padding, border-radius are also set by JS but can be standardized here */
+    background-color: rgba(0, 0, 0, 0.7); /* Consistent with other controls */
+    border: 1px solid #e69138;
+    box-shadow: 0 0 15px rgba(230, 145, 56, 0.5);
+    display: flex; /* Align label and select nicely */
+    align-items: center;
+    padding: 8px 10px; /* Adjusted padding */
+    border-radius: 8px; /* Consistent border-radius */
+}
+
+#speaker-picker-container label {
+    color: #e69138; /* Orange label text */
+    font-size: 13px;
+    margin-right: 8px; /* Spacing between label and select */
+}
+
+#speaker-picker-select {
+    background-color: rgba(50, 50, 50, 0.8);
+    color: #f0f0f0;
+    border: 1px solid #777;
+    border-radius: 5px;
+    padding: 5px 8px;
+    font-size: 13px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#speaker-picker-select:hover {
+    border-color: #e69138;
+}
+
+#speaker-picker-select:focus {
+    border-color: #e69138;
+    box-shadow: 0 0 8px rgba(230, 145, 56, 0.6);
+}
+
+#speaker-picker-select option {
+    background-color: #333;
+    color: #f0f0f0;
+}

@@ -915,6 +915,15 @@ class AudioVisualizer3D {
             window.listener.positionZ.value = 0.5;
         }
         
+        // Clear speaker highlighting
+        this.highlightSpeaker(-1); // Pass an invalid index to clear all highlights
+
+        // Reset speaker picker dropdown
+        const speakerPicker = document.getElementById('speaker-picker-select');
+        if (speakerPicker) {
+            speakerPicker.value = ""; // Reset to the default "Select Speaker" option
+        }
+        
         // Update the 2D view
         this.updateTopdownView();
     }
@@ -1339,46 +1348,20 @@ class AudioVisualizer3D {
      * Highlight the selected speaker in performer mode
      */
     highlightSpeaker(speakerIndex) {
-        // Reset all speakers to normal appearance
-        this.speakers.forEach((speaker, index) => {
-            speaker.children.forEach(child => {
-                if (child instanceof THREE.Mesh && 
-                    child.material && 
-                    child.material.color) {
-                    
-                    // Reset color to normal
-                    if (index !== speakerIndex) {
-                        if (child.material.color.getHexString() === 'e69138') {
-                            // For the cone, reset to orange
-                            child.material.color.setHex(0xe69138);
-                            if (child.material.emissive) {
-                                child.material.emissive.setHex(0xe69138);
-                            }
-                        } else {
-                            // For other parts, reset to dark gray
-                            child.material.color.setHex(0x333333);
-                        }
-                    }
+        this.speakers.forEach((speakerGroup, index) => {
+            // Assuming the box is the first child of the speaker group
+            const box = speakerGroup.children.find(child => child.geometry instanceof THREE.BoxGeometry);
+
+            if (box && box.material) {
+                if (index === speakerIndex) {
+                    box.material.color.setHex(0x00ff00); // Highlight selected speaker's box
+                } else {
+                    box.material.color.setHex(0x333333); // Reset other speakers' box color to default
                 }
-            });
+            }
+            // The cone's appearance (emissive color/intensity for audio visualization)
+            // is handled by updateSpeakers and should not be overridden here.
         });
-        
-        // Highlight the selected speaker
-        if (this.speakers[speakerIndex]) {
-            this.speakers[speakerIndex].children.forEach(child => {
-                if (child instanceof THREE.Mesh && 
-                    child.material && 
-                    child.material.color) {
-                    
-                    // Highlight with bright color
-                    child.material.color.setHex(0x00ff00);
-                    if (child.material.emissive) {
-                        child.material.emissive.setHex(0x00ff00);
-                        child.material.emissiveIntensity = 0.5;
-                    }
-                }
-            });
-        }
     }
 }
 
@@ -1401,6 +1384,67 @@ document.addEventListener('DOMContentLoaded', () => {
                     window.visualizer3D.resetOrientation();
                 }
             });
+        }
+
+        // Create and add speaker picker for Performer mode
+        const controlsContainer = document.getElementById('scene-container')?.parentElement || document.body; // Or a more specific controls div
+        const speakerPickerContainer = document.createElement('div');
+        speakerPickerContainer.id = 'speaker-picker-container';
+        speakerPickerContainer.style.position = 'absolute';
+        speakerPickerContainer.style.top = '150px';
+        speakerPickerContainer.style.left = '200px'
+        // speakerPickerContainer.style.right = '0px'; // Adjust positioning as needed
+        speakerPickerContainer.style.zIndex = '1000';
+        speakerPickerContainer.style.padding = '5px';
+        speakerPickerContainer.style.background = 'rgba(0,0,0,0.5)';
+        speakerPickerContainer.style.color = 'white';
+        speakerPickerContainer.style.borderRadius = '5px';
+        // TODO: The visibility of this picker should be tied to "Performer" mode.
+        // Example: if (currentMode === 'performer') speakerPickerContainer.style.display = 'block'; else speakerPickerContainer.style.display = 'none';
+
+
+        const pickerLabel = document.createElement('label');
+        pickerLabel.htmlFor = 'speaker-picker-select';
+        pickerLabel.textContent = 'View from Speaker: ';
+        pickerLabel.style.marginRight = '5px';
+
+        const speakerSelect = document.createElement('select');
+        speakerSelect.id = 'speaker-picker-select';
+        
+        const defaultOption = document.createElement('option');
+        defaultOption.value = "";
+        defaultOption.textContent = "-- Select Speaker --";
+        speakerSelect.appendChild(defaultOption);
+
+        if (window.visualizer3D && window.visualizer3D.speakers) {
+            window.visualizer3D.speakers.forEach((speaker, index) => {
+                const option = document.createElement('option');
+                option.value = index.toString();
+                // Speaker numbers are 1-based in the visualization
+                option.textContent = `Speaker ${speaker.userData.index + 1}`; 
+                speakerSelect.appendChild(option);
+            });
+        }
+
+        speakerSelect.addEventListener('change', (event) => {
+            if (window.visualizer3D && event.target.value !== "") {
+                const selectedIndex = parseInt(event.target.value, 10);
+                window.visualizer3D.moveToSpeakerPosition(selectedIndex);
+            } else if (window.visualizer3D && event.target.value === "") {
+                // Optional: Reset view or clear highlight if "Select Speaker" is chosen
+                // window.visualizer3D.resetOrientation(); // Or just clear highlights
+                window.visualizer3D.highlightSpeaker(-1); // Clear highlights
+            }
+        });
+
+        speakerPickerContainer.appendChild(pickerLabel);
+        speakerPickerContainer.appendChild(speakerSelect);
+        
+        // Insert before the reset button if it exists, otherwise append to controls container
+        if (resetButton && resetButton.parentElement) {
+            resetButton.parentElement.insertBefore(speakerPickerContainer, resetButton);
+        } else {
+            controlsContainer.appendChild(speakerPickerContainer);
         }
         
         // Initialize with the current mode
