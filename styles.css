@@ -633,9 +633,11 @@ input:checked + .slider:before {
 /* Volume Display Panel Styles */
 #volume-display-panel {
     position: absolute;
-    top: 100px;
-    right: 30px;
-    width: 320px;
+    top: 50%; /* Center vertically */
+    left: 50%; /* Center horizontally */
+    transform: translate(-50%, -50%); /* Adjust for exact centering */
+    width: 500px; /* Adjusted width for 6 horizontal bars */
+    height: 300px;
     background: rgba(0, 0, 0, 0.85);
     color: #fff;
     border: 2px solid #e69138;
@@ -643,6 +645,7 @@ input:checked + .slider:before {
     padding: 15px;
     z-index: 120;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    /* display: none; is handled by JS */
 }
 
 .volume-panel-header {
@@ -675,9 +678,11 @@ input:checked + .slider:before {
 }
 
 .volume-bars-container {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 15px;
+    display: flex; /* Use flexbox for horizontal layout */
+    flex-direction: row; /* Arrange items in a row */
+    justify-content: space-around; /* Distribute space around items */
+    align-items: flex-start; /* Align items to the top */
+    gap: 10px; /* Space between speaker groups */
 }
 
 .volume-bar-group {
@@ -688,7 +693,7 @@ input:checked + .slider:before {
 }
 
 .volume-bar-wrapper {
-    width: 30px;
+    width: 30px; /* Width of the vertical bar container */
     height: 120px;
     position: relative;
 }
@@ -768,23 +773,46 @@ input:checked + .slider:before {
 /* Mobile optimization for volume panel */
 @media (max-width: 768px) {
     #volume-display-panel {
-        top: 60px;
-        right: 10px;
-        width: 280px;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 90%; /* Use percentage for better responsiveness */
+        max-width: 320px; /* Max width on small screens */
         padding: 10px;
     }
     
     .volume-bars-container {
-        grid-template-columns: repeat(2, 1fr);
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap; /* Allow bars to wrap to the next line */
+        justify-content: space-around;
+        gap: 8px; /* Adjust gap for mobile */
     }
     
+    .volume-bar-group {
+        /* Adjust basis for wrapping, e.g., fit 3 per row */
+        flex-basis: calc(33.33% - 10px); /* Adjust based on gap and desired items per row */
+        min-width: 60px; /* Ensure labels and bars are not too squished */
+    }
+
     .volume-bar-wrapper {
-        height: 100px;
+        height: 100px; /* Slightly shorter bars on mobile */
+        width: 25px; /* Slightly thinner bars on mobile */
     }
     
+    .speaker-label {
+        font-size: 11px; /* Smaller font for labels */
+    }
+
+    .volume-percentage {
+        font-size: 10px; /* Smaller font for percentage */
+        bottom: -20px; /* Adjust position */
+    }
+
     #volumeDisplayBtn {
-        top: 100px;
-        right: 10px;
+        top: auto; /* Remove fixed top */
+        bottom: 20px; /* Position near bottom controls */
+        right: 20px;
         font-size: 12px;
         padding: 6px 10px;
     }
