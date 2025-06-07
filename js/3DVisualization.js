@@ -1363,6 +1363,28 @@ class AudioVisualizer3D {
             // is handled by updateSpeakers and should not be overridden here.
         });
     }
+
+    /**
+     * Toggles the visibility of the speaker picker based on performer mode
+     * @param {boolean} isActive - Whether performer mode is active
+     */
+    setPerformerModeActive(isActive) {
+        const speakerPickerContainer = document.getElementById('speaker-picker-container');
+        if (speakerPickerContainer) {
+            if (isActive) {
+                speakerPickerContainer.classList.remove('hidden');
+            } else {
+                speakerPickerContainer.classList.add('hidden');
+                // Reset speaker selection when leaving performer mode
+                this.highlightSpeaker(-1);
+                // Reset the dropdown selection
+                const speakerSelect = document.getElementById('speaker-picker-select');
+                if (speakerSelect) {
+                    speakerSelect.value = "";
+                }
+            }
+        }
+    }
 }
 
 // Initialize the 3D visualizer when the DOM is fully loaded
