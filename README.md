@@ -19,6 +19,7 @@ This is a 3D visualization in the works that is meant to go along with the main 
 > - Fix the two bugs stated above (if possible; it appears to be quite difficult to do so!)
 > - Implement Strophe V
 > - Need Professor Ruthmann to check on the behavior of transition1-2 and transition3-4 to make sure that they follow what is requested on the score
+> - *Add a new composition that can demonstrate the spatial environment...? (interesting idea for a composition)*
 
 ## Command to run this
 
