@@ -36,6 +36,8 @@ class AudioVisualizer3D {
         this.topdownCanvas = document.getElementById('topdown-canvas');
         this.topdownCtx = this.topdownCanvas ? this.topdownCanvas.getContext('2d') : null;
 
+        this.defaultFov = 85; // Store the default FOV
+
         // Initialize everything
         this.init();
         this.setupJoystick();
@@ -54,7 +56,7 @@ class AudioVisualizer3D {
         this.scene.background = new THREE.Color(0x000000);
         
         // Create camera with wider field of view for more immersion
-        const fov = 85;
+        const fov = this.defaultFov; // Use stored default FOV
         const aspect = this.container.clientWidth / this.container.clientHeight;
         const near = 0.1;
         const far = 1000;
@@ -898,6 +900,8 @@ class AudioVisualizer3D {
         this.rotationAngle = 0;
         this.rotationSpeed = 0;
         this.listenerPosition.set(0, 1.7, 0.5); // Reset position to center
+        this.camera.fov = this.defaultFov; // Ensure FOV is reset
+        this.camera.updateProjectionMatrix();
         this.listener.rotation.y = 0;
         this.listener.position.copy(this.listenerPosition);
         
@@ -940,6 +944,20 @@ class AudioVisualizer3D {
         this.updateTopdownView();
     }
     
+    setEngineerViewOptimizedForMinimized(isMinimized) {
+        if (isMinimized) {
+            // Adjust camera for the small, minimized view in engineer mode
+            this.camera.position.set(0, 5, 10); // Position further back and higher
+            this.camera.fov = 60; // Adjust FOV for a broader view in small window
+            this.camera.lookAt(0, 1, 0); // Look towards the center of the speaker setup
+        } else {
+            // Reset FOV to default when not in minimized engineer view
+            // Specific positions for other modes will be handled by moveCamera/resetOrientation
+            this.camera.fov = this.defaultFov;
+        }
+        this.camera.updateProjectionMatrix();
+    }
+
     updateTopdownView() {
         if (!this.topdownCtx || !this.topdownCanvas) return;
 

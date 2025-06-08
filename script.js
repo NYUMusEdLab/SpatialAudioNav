@@ -18,6 +18,7 @@ let currentMode = 'audience'; // Default to audience mode
 let currentScene = 'default';
 let isMixingMode = false;
 let currentPerformerSpeakerIndex = 0; // For performer mode
+let toggleMin3DViewBtn = null; // Declare variable for the toggle button
 
 // Audio effects for special scenes
 let circularPanner = null;
@@ -990,6 +991,8 @@ function setMode(mode) {
     currentMode = mode;
     updateListenerPosition();
     
+    console.log(`Setting mode to: ${mode}`); // Debug log
+    
     // Update UI
     document.querySelectorAll('.mode-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.mode === mode);
@@ -1014,20 +1017,50 @@ function setMode(mode) {
     const sceneContainer = document.getElementById('scene-container');
     const topdownView = document.querySelector('.topdown-view');
     
+    console.log('Elements found:', { 
+        sceneContainer: !!sceneContainer, 
+        topdownView: !!topdownView 
+    }); // Debug log
+    
     if (sceneContainer && topdownView) {
         // In engineer mode, make 2D view bigger and 3D view smaller
         if (mode === 'engineer') {
+            console.log('Adding minimized/expanded classes');
             sceneContainer.classList.add('minimized');
             topdownView.classList.add('expanded');
+            if (toggleMin3DViewBtn) toggleMin3DViewBtn.style.display = 'block';
+            if (window.visualizer3D && window.visualizer3D.setEngineerViewOptimizedForMinimized) {
+                window.visualizer3D.setEngineerViewOptimizedForMinimized(true);
+            }
+            // Ensure 3D view is visible by default when switching to engineer mode
+            sceneContainer.classList.remove('minimized-view-hidden');
+            if(toggleMin3DViewBtn) toggleMin3DViewBtn.textContent = 'Hide 3D View';
+
         } else {
+            console.log('Removing minimized/expanded classes');
             sceneContainer.classList.remove('minimized');
             topdownView.classList.remove('expanded');
+            if (toggleMin3DViewBtn) toggleMin3DViewBtn.style.display = 'none';
+            // Ensure 3D view is visible when leaving engineer mode & reset its specific camera adjustments
+            sceneContainer.classList.remove('minimized-view-hidden');
+            if (window.visualizer3D && window.visualizer3D.setEngineerViewOptimizedForMinimized) {
+                window.visualizer3D.setEngineerViewOptimizedForMinimized(false);
+            }
         }
+        
+        // Log the current classes for verification
+        console.log('Current classes:', {
+            sceneContainer: sceneContainer.className,
+            topdownView: topdownView.className
+        });
         
         // Force a resize event after a short delay to ensure proper rendering after class changes
         setTimeout(() => {
+            console.log('Dispatching resize event'); // Debug log
             window.dispatchEvent(new Event('resize'));
         }, 50);
+    } else {
+        console.error('Could not find necessary elements for view switching'); // Error log if elements missing
     }
     
     // Reset view in 3D visualization
@@ -1214,7 +1247,10 @@ function showSceneTrivia(scene) {
     if (triviaContainer) {
         triviaContainer.style.display = 'flex';
         setTimeout(() => {
-            triviaContainer.style.display = 'none';
+            // Check if it's still displayed before hiding, to avoid issues if user closed it manually
+            if (triviaContainer.style.display === 'flex') {
+                triviaContainer.style.display = 'none';
+            }
         }, 3000);
     }
 }
@@ -1350,12 +1386,37 @@ document.addEventListener('DOMContentLoaded', () => {
         closeVolumePanel.addEventListener('click', () => {
             if (volumeDisplayPanel) {
                 volumeDisplayPanel.style.display = 'none';
-                if (volumeDisplayBtn) {
-                    volumeDisplayBtn.classList.remove('active');
-                }
+            }
+            if (volumeDisplayBtn) {
+                volumeDisplayBtn.classList.remove('active');
             }
         });
     }
+
+    // Create and setup toggle button for minimized 3D view
+    toggleMin3DViewBtn = document.createElement('button');
+    toggleMin3DViewBtn.id = 'toggleMin3DViewBtn';
+    toggleMin3DViewBtn.textContent = 'Hide 3D View';
+    toggleMin3DViewBtn.style.display = 'none'; // Initially hidden
+    toggleMin3DViewBtn.classList.add('minimized-view-toggle-btn');
+
+    const immersiveContainer = document.getElementById('immersive-container');
+    if (immersiveContainer) {
+        immersiveContainer.appendChild(toggleMin3DViewBtn);
+    }
+
+    toggleMin3DViewBtn.addEventListener('click', () => {
+        const sceneContainer = document.getElementById('scene-container');
+        if (sceneContainer.classList.contains('minimized-view-hidden')) {
+            sceneContainer.classList.remove('minimized-view-hidden');
+            toggleMin3DViewBtn.textContent = 'Hide 3D View';
+            // Crucial: Dispatch resize for Three.js to re-render correctly in the now visible container
+            setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+        } else {
+            sceneContainer.classList.add('minimized-view-hidden');
+            toggleMin3DViewBtn.textContent = 'Show 3D View';
+        }
+    });
     
     // Initialize mode and scene
     setMode('audience');
@@ -1435,91 +1496,91 @@ function resetEngineerSpeakerKeys() {
     engineerSpeakerKeys = [false, false, false, false, false, false];
 }
 
-// Function to change the mode (engineer, audience, performer)
-function setMode(mode) {
-    if (!['engineer', 'audience', 'performer'].includes(mode)) return;
+// // Function to change the mode (engineer, audience, performer)
+// function setMode(mode) {
+//     if (!['engineer', 'audience', 'performer'].includes(mode)) return;
     
-    currentMode = mode;
-    updateListenerPosition();
+//     currentMode = mode;
+//     updateListenerPosition();
     
-    // Update UI
-    document.querySelectorAll('.mode-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.mode === mode);
-    });
+//     // Update UI
+//     document.querySelectorAll('.mode-btn').forEach(btn => {
+//         btn.classList.toggle('active', btn.dataset.mode === mode);
+//     });
     
-    // Show/hide performer-specific UI
-    const performerDropdown = document.getElementById('performer-dropdown-container');
-    if (performerDropdown) {
-        performerDropdown.style.display = mode === 'performer' ? 'block' : 'none';
-    }
+//     // Show/hide performer-specific UI
+//     const performerDropdown = document.getElementById('performer-dropdown-container');
+//     if (performerDropdown) {
+//         performerDropdown.style.display = mode === 'performer' ? 'block' : 'none';
+//     }
     
-    // Disable manual controls in performer mode
-    if (mode === 'performer') {
-        const mixModeToggle = document.querySelector('#mixModeToggle');
-        if (mixModeToggle) {
-            mixModeToggle.checked = false;
-            isMixingMode = false;
-        }
-    }
+//     // Disable manual controls in performer mode
+//     if (mode === 'performer') {
+//         const mixModeToggle = document.querySelector('#mixModeToggle');
+//         if (mixModeToggle) {
+//             mixModeToggle.checked = false;
+//             isMixingMode = false;
+//         }
+//     }
     
-    // Handle view swapping for different modes
-    const sceneContainer = document.getElementById('scene-container');
-    const topdownView = document.querySelector('.topdown-view');
+//     // Handle view swapping for different modes
+//     const sceneContainer = document.getElementById('scene-container');
+//     const topdownView = document.querySelector('.topdown-view');
     
-    if (sceneContainer && topdownView) {
-        // In engineer mode, make 2D view bigger and 3D view smaller
-        if (mode === 'engineer') {
-            sceneContainer.classList.add('minimized');
-            topdownView.classList.add('expanded');
-        } else {
-            sceneContainer.classList.remove('minimized');
-            topdownView.classList.remove('expanded');
-        }
+//     if (sceneContainer && topdownView) {
+//         // In engineer mode, make 2D view bigger and 3D view smaller
+//         if (mode === 'engineer') {
+//             sceneContainer.classList.add('minimized');
+//             topdownView.classList.add('expanded');
+//         } else {
+//             sceneContainer.classList.remove('minimized');
+//             topdownView.classList.remove('expanded');
+//         }
         
-        // Force a resize event after a short delay to ensure proper rendering after class changes
-        setTimeout(() => {
-            window.dispatchEvent(new Event('resize'));
-        }, 50);
-    }
+//         // Force a resize event after a short delay to ensure proper rendering after class changes
+//         setTimeout(() => {
+//             window.dispatchEvent(new Event('resize'));
+//         }, 50);
+//     }
     
-    // Reset view in 3D visualization
-    if (window.visualizer3D) {
-        window.visualizer3D.resetOrientation();
+//     // Reset view in 3D visualization
+//     if (window.visualizer3D) {
+//         window.visualizer3D.resetOrientation();
         
-        // For audience mode, move back
-        if (mode === 'audience' && window.visualizer3D.moveCamera) {
-            window.visualizer3D.moveCamera(0, 1.7, 0.5);
-        } 
-        // if (mode === 'audience' && window.visualizer3D.moveCamera) {
-        //     window.visualizer3D.moveCamera(0, 1.7, 2);
-        // } 
+//         // For audience mode, move back
+//         if (mode === 'audience' && window.visualizer3D.moveCamera) {
+//             window.visualizer3D.moveCamera(0, 1.7, 0.5);
+//         } 
+//         // if (mode === 'audience' && window.visualizer3D.moveCamera) {
+//         //     window.visualizer3D.moveCamera(0, 1.7, 2);
+//         // } 
         
-        // For engineer mode, position higher looking down
-        else if (mode === 'engineer' && window.visualizer3D.moveCamera) {
-            window.visualizer3D.moveCamera(0, 2.5, 0); // Lower height to keep things visible
-        }
-        // For performer mode, position at the selected speaker
-        else if (mode === 'performer' && window.visualizer3D.moveToSpeakerPosition) {
-            window.visualizer3D.moveToSpeakerPosition(currentPerformerSpeakerIndex);
-        }
-    }
+//         // For engineer mode, position higher looking down
+//         else if (mode === 'engineer' && window.visualizer3D.moveCamera) {
+//             window.visualizer3D.moveCamera(0, 2.5, 0); // Lower height to keep things visible
+//         }
+//         // For performer mode, position at the selected speaker
+//         else if (mode === 'performer' && window.visualizer3D.moveToSpeakerPosition) {
+//             window.visualizer3D.moveToSpeakerPosition(currentPerformerSpeakerIndex);
+//         }
+//     }
     
-    // Reset engineer speaker keys when changing mode
-    if (mode !== 'engineer') {
-        resetEngineerSpeakerKeys();
-    }
+//     // Reset engineer speaker keys when changing mode
+//     if (mode !== 'engineer') {
+//         resetEngineerSpeakerKeys();
+//     }
     
-    // Update the pattern for current time position
-    if (!currentAudioElement.paused) {
-        const currentTime = currentAudioElement.currentTime;
+//     // Update the pattern for current time position
+//     if (!currentAudioElement.paused) {
+//         const currentTime = currentAudioElement.currentTime;
         
-        const timestamps = timestampPatterns[currentScene].timestamps;
-        let newIndex = timestamps.findIndex((timestamp, index) => {
-            const nextTimestamp = timestamps[index + 1] || Infinity;
-            return currentTime >= timestamp && currentTime < nextTimestamp;
-        });
+//         const timestamps = timestampPatterns[currentScene].timestamps;
+//         let newIndex = timestamps.findIndex((timestamp, index) => {
+//             const nextTimestamp = timestamps[index + 1] || Infinity;
+//             return currentTime >= timestamp && currentTime < nextTimestamp;
+//         });
         
-        if (newIndex === -1) newIndex = 0;
-        applyPattern(newIndex);
-    }
-}
+//         if (newIndex === -1) newIndex = 0;
+//         applyPattern(newIndex);
+//     }
+// }
