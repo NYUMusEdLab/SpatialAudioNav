@@ -4,11 +4,21 @@
 
 This is a 3D visualization in the works that is meant to go along with the main interface for the spatial audio playground (the Boulez project)!
 
+### Command to run this
+
+`python3 -m http.server 8000`
+
 > **Note: there are two specific bugs that occur, but they both have workarounds:**
 >
 > - When clicking on the "Audio Engineer" mode, the 3D view "disappears" and the 2D view appears to be stretched and pixel-blurred. **To fix this: click the `Hide 3D View` button, and then click it again. This will toggle the 3D view, and the 3D view should then come into view, and the 2D view should be clear and un-stretched.**
 > - When going from the Audio Engineer mode to the Audience mode, the 2D and 3D views are in weird places once again. **To fix this: simply click on the `Audience` button in the mode selector at the top-left corner again. This will solve the issue.**
-> -
+
+> **Outstanding Tasks:**
+>
+> - Add text to each of the 5 remaining slides in the audience view
+> - Fix the two bugs stated above (if possible; it appears to be quite difficult to do so!)
+> - Implement Strophe V
+> - Need Professor Ruthmann to check on the behavior of transition1-2 and transition3-4 to make sure that they follow what is requested on the score
 
 ## Command to run this
 
