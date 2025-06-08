@@ -10,11 +10,44 @@ This is a 3D visualization in the works that is meant to go along with the main 
 > - When going from the Audio Engineer mode to the Audience mode, the 2D and 3D views are in weird places once again. **To fix this: simply click on the `Audience` button in the mode selector at the top-left corner again. This will solve the issue.**
 > -
 
-![3D visualization](2025-4-1.png "3D visualization for spatial audio environment")
-
 ## Command to run this
 
 `python3 -m http.server 8000`
+
+## Below are screenshots from various different points during the coding process
+
+### April 1
+
+![3D visualization](2025-4-1.png "3D visualization for spatial audio environment")
+
+### End of April
+
+![3D visualization](End_of_April.png "3D visualization for spatial audio environment")
+
+### End of May
+
+##### Audio Engineer
+
+![3D visualization](End_of_May_Audio_Engineer.png "3D visualization for spatial audio environment")
+
+##### Audience
+
+![3D visualization](End_of_May_Audience.png "3D visualization for spatial audio environment")
+
+##### Performer
+
+![3D visualization](End_of_May_Performer.png "3D visualization for spatial audio environment")
+
+### June 8
+
+##### Audio Engineer
+
+![3D visualization](June_8_Audio_Engineer.png "3D visualization for spatial audio environment")
+
+##### Audience * Performer (combined into one UI)
+
+![3D visualization](June_8_Audience&Performer.png "3D visualization for spatial audio environment")
+
 
 ## TODOs:
 
