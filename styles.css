@@ -151,7 +151,7 @@ input:checked + .slider:before {
 /* Scene Selector */
 .scene-selector {
     position: absolute;
-    top: 140px;
+    top: 180px;
     left: 20px;
     background-color: rgba(0, 0, 0, 0.7);
     border-radius: 10px;
