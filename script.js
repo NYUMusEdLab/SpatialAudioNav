@@ -18,6 +18,7 @@ let currentMode = 'audience'; // Default to audience mode
 let currentScene = 'default';
 let isMixingMode = false;
 let toggleMin3DViewBtn = null; // Declare variable for the toggle button
+let currentPerformerSpeakerIndex = 0;
 
 // Audio effects for special scenes
 let circularPanner = null;
@@ -138,6 +139,15 @@ const modePositions = {
 let patternInterval = null;
 let currentPatternIndex = 0;
 
+const speakerPositions = [
+    { angle: 210, x: -6.1, y: 1.7, z: -3.5 }, // Speaker 1 (left front)
+    { angle: 150, x: 6.1, y: 1.7, z: -3.5 },  // Speaker 2 (right front)
+    { angle: 90, x: 7, y: 1.7, z: 0 },       // Speaker 3 (right)
+    { angle: 30, x: 6.1, y: 1.7, z: 3.5 },   // Speaker 4 (right back)
+    { angle: 330, x: -6.1, y: 1.7, z: 3.5 }, // Speaker 5 (left back)
+    { angle: 270, x: -7, y: 1.7, z: 0 }      // Speaker 6 (left)
+];
+
 // UI Controls
 const playPauseButton = document.getElementById('playPauseButton');
 const resetButton = document.getElementById('resetButton');
@@ -202,7 +212,15 @@ function initAudioContext() {
 function updateListenerPosition() {
     if (!audioCtx || !audioCtx.listener) return;
     
-    const position = modePositions[currentMode];
+    let position;
+    
+    // For performer mode, use the position of the selected speaker
+    if (currentMode === 'performer' && speakerPositions[currentPerformerSpeakerIndex]) {
+        position = speakerPositions[currentPerformerSpeakerIndex];
+    } else {
+        position = modePositions[currentMode];
+    }
+    // const position = modePositions[currentMode];
     
     // Set listener position
     const listener = audioCtx.listener;
@@ -1004,6 +1022,21 @@ function setMode(mode) {
             }
         }
         
+
+            const performerDropdown = document.getElementById('performer-dropdown-container');
+        if (performerDropdown) {
+            performerDropdown.style.display = mode === 'audience' ? 'block' : 'none';
+        }
+        
+        // // Disable manual controls in performer mode
+        // if (mode === 'performer') {
+        //     const mixModeToggle = document.querySelector('#mixModeToggle');
+        //     if (mixModeToggle) {
+        //         mixModeToggle.checked = false;
+        //         isMixingMode = false;
+        //     }
+        // }
+        
         // Log the current classes for verification
         console.log('Current classes:', {
             sceneContainer: sceneContainer.className,
@@ -1206,6 +1239,19 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (resetButton) {
         resetButton.title = "Reset to Beginning";
+    }
+
+    const performerSelect = document.getElementById('performer-speaker-select');
+    if (performerSelect) {
+        performerSelect.addEventListener('change', () => {
+            currentPerformerSpeakerIndex = parseInt(performerSelect.value);
+            if (currentMode === 'performer') {
+                updateListenerPosition();
+                if (window.visualizer3D && window.visualizer3D.moveToSpeakerPosition) {
+                    window.visualizer3D.moveToSpeakerPosition(currentPerformerSpeakerIndex);
+                }
+            }
+        });
     }
     
     // Set up mode selection
