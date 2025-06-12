@@ -1380,26 +1380,35 @@ class AudioVisualizer3D {
     moveToSpeakerPosition(speakerIndex) {
         if (speakerIndex < 0 || speakerIndex >= this.speakers.length) return;
         
-        // Get the speaker object
         const speaker = this.speakers[speakerIndex];
         if (!speaker) return;
         
-        // Get speaker position
-        const position = speaker.position.clone();
-        
-        // Move slightly behind the speaker (as if standing there)
-        const centerDirection = new THREE.Vector3(0, position.y, 0).sub(position).normalize();
-        position.add(centerDirection.multiplyScalar(-0.5)); // Step back a bit
-        
-        // Set camera position to be at person height
-        position.y = 1.7;
-        this.camera.position.copy(position);
-        
-        // Look at the center
-        this.camera.lookAt(0, position.y, 0);
-        
-        // Update speaker highlight
+        const speakerWorldPosition = new THREE.Vector3();
+        speaker.getWorldPosition(speakerWorldPosition); // Get world position of the speaker group
+
+        // Calculate viewpoint slightly behind the speaker, facing the origin (0, 1.7, 0)
+        const viewpointOffset = speakerWorldPosition.clone().normalize().multiplyScalar(0.8); // Offset from speaker towards origin
+        const targetViewPosition = speakerWorldPosition.clone().sub(viewpointOffset);
+        targetViewPosition.y = 1.7; // Listener height
+
+        this.listenerPosition.copy(targetViewPosition);
+
+        // Calculate rotation angle to look at the center (0, 1.7, 0)
+        const lookAtTarget = new THREE.Vector3(0, 1.7, 0);
+        const dx = lookAtTarget.x - this.listenerPosition.x;
+        const dz = lookAtTarget.z - this.listenerPosition.z;
+        this.rotationAngle = Math.atan2(-dx, -dz); // Adjusted for THREE.js coordinate system and avatar orientation
+
+        this.updateListenerRotation(); // This updates camera, 3D listener, and Web Audio listener
         this.highlightSpeaker(speakerIndex);
+    }
+
+    moveToPerformerPerspective() {
+        this.listenerPosition.set(0, 1.7, -2); // Position at the red circle
+        this.rotationAngle = Math.PI; // Face towards positive Z (center of speaker array)
+        
+        this.updateListenerRotation(); // Updates camera, 3D listener, and Web Audio listener
+        this.highlightSpeaker(-1); // Clear any speaker highlights
     }
     
     /**

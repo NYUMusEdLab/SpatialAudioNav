@@ -650,6 +650,19 @@ input:checked + .slider:before {
     transform: rotate(90deg);
 }
 
+.performer-dropdown {
+    position: absolute;
+    top: 120px;
+    left: 20px;
+    background-color: rgba(0, 0, 0, 0.7);
+    border: 1px solid #e69138;
+    border-radius: 8px;
+    padding: 10px;
+    z-index: 110;
+    color: #f0f0f0;
+    display: block; /* Ensure it's visible */
+}
+
 .volume-bars-container {
     display: flex; /* Use flexbox for horizontal layout */
     flex-direction: row; /* Arrange items in a row */
@@ -657,6 +670,8 @@ input:checked + .slider:before {
     align-items: flex-start; /* Align items to the top */
     gap: 10px; /* Space between speaker groups */
 }
+
+
 
 .volume-bar-group {
     display: flex;

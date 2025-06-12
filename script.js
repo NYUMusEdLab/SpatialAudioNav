@@ -1245,13 +1245,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const performerSelect = document.getElementById('performer-speaker-select');
     if (performerSelect) {
         performerSelect.addEventListener('change', () => {
-            currentPerformerSpeakerIndex = parseInt(performerSelect.value);
-            if (currentMode === 'performer') {
-                updateListenerPosition();
-                if (window.visualizer3D && window.visualizer3D.moveToSpeakerPosition) {
-                    window.visualizer3D.moveToSpeakerPosition(currentPerformerSpeakerIndex);
+            const selectedValue = performerSelect.value;
+
+            if (currentMode === 'audience') {
+                if (selectedValue === "8") { // "Audience Center" selected
+                    if (window.visualizer3D) {
+                        window.visualizer3D.resetOrientation();
+                    }
+                } else if (selectedValue === "performer_perspective") { // "Performer Perspective" selected
+                    if (window.visualizer3D && window.visualizer3D.moveToPerformerPerspective) {
+                        window.visualizer3D.moveToPerformerPerspective();
+                    }
+                } else { // A specific speaker location selected
+                    const speakerIndex = parseInt(selectedValue, 10);
+                    if (!isNaN(speakerIndex) && window.visualizer3D && window.visualizer3D.moveToSpeakerPosition) {
+                        window.visualizer3D.moveToSpeakerPosition(speakerIndex);
+                    }
                 }
             }
+            // Note: currentPerformerSpeakerIndex is primarily for 'performer' mode logic,
+            // which is not the mode where this dropdown is typically active.
+            // For 'audience' mode, direct calls to visualizer3D methods handle the view changes.
         });
     }
     
