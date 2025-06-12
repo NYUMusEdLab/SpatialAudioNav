@@ -1497,7 +1497,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const pickerLabel = document.createElement('label');
         pickerLabel.htmlFor = 'speaker-picker-select';
-        pickerLabel.textContent = 'Location: ';
+        pickerLabel.textContent = '[OLD UI] Location: ';
         pickerLabel.style.marginRight = '5px';
 
         const speakerSelect = document.createElement('select');
