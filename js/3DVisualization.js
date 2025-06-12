@@ -1488,7 +1488,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const pickerLabel = document.createElement('label');
         pickerLabel.htmlFor = 'speaker-picker-select';
-        pickerLabel.textContent = 'View from Speaker: ';
+        pickerLabel.textContent = 'Location: ';
         pickerLabel.style.marginRight = '5px';
 
         const speakerSelect = document.createElement('select');
@@ -1496,7 +1496,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const defaultOption = document.createElement('option');
         defaultOption.value = "";
-        defaultOption.textContent = "-- Select Speaker --";
+        defaultOption.textContent = "-- Select Location --";
         speakerSelect.appendChild(defaultOption);
 
         if (window.visualizer3D && window.visualizer3D.speakers) {

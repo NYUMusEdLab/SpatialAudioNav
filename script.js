@@ -140,6 +140,7 @@ let patternInterval = null;
 let currentPatternIndex = 0;
 
 const speakerPositions = [
+    
     { angle: 210, x: -6.1, y: 1.7, z: -3.5 }, // Speaker 1 (left front)
     { angle: 150, x: 6.1, y: 1.7, z: -3.5 },  // Speaker 2 (right front)
     { angle: 90, x: 7, y: 1.7, z: 0 },       // Speaker 3 (right)
