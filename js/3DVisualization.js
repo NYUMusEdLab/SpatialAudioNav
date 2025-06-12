@@ -151,6 +151,32 @@ class AudioVisualizer3D {
         ring.position.y = -0.08;
         this.scene.add(ring);
 
+        // Add center circle
+        const centerCircleGeometry = new THREE.RingGeometry(0.5, 0.55, 32);
+        const centerCircleMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.6
+        });
+        const centerCircle = new THREE.Mesh(centerCircleGeometry, centerCircleMaterial);
+        centerCircle.rotation.x = -Math.PI / 2;
+        centerCircle.position.y = -0.07; // Slightly above the grid
+        this.scene.add(centerCircle);
+
+        // Add red circle at z=-2
+        const redCircleGeometry = new THREE.RingGeometry(0.2, 0.25, 32);
+        const redCircleMaterial = new THREE.MeshBasicMaterial({
+            color: 0xff0000,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.8
+        });
+        const redCircle = new THREE.Mesh(redCircleGeometry, redCircleMaterial);
+        redCircle.rotation.x = -Math.PI / 2;
+        redCircle.position.set(0, -0.06, -2); // Position at z=-2, slightly above the grid
+        this.scene.add(redCircle);
+
         // Add text panels to the environment walls
         this.addTextPanels();
     }
@@ -967,6 +993,7 @@ class AudioVisualizer3D {
         const radius = Math.min(width, height) / 2.5; // Radius for speakers circle
         const centerX = width / 2;
         const centerY = height / 2;
+        const scale = radius / 7; // Scale factor from 3D world to 2D canvas
         
         // Clear the canvas
         ctx.clearRect(0, 0, width, height);
@@ -1004,6 +1031,20 @@ class AudioVisualizer3D {
         ctx.arc(centerX, centerY, radius * (this.maxRadius / 7), 0, Math.PI * 2);
         ctx.stroke();
         ctx.setLineDash([]); // Reset dash pattern
+
+        // Draw white center circle
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 0.5 * scale, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Draw red circle at z=-2
+        ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY - 2 * scale, 0.2 * scale, 0, Math.PI * 2);
+        ctx.stroke();
         
         // Define speaker positions with corrected gain node mappings
         const speakerPositions = [
@@ -1064,7 +1105,6 @@ class AudioVisualizer3D {
         });
         
         // Calculate listener position in 2D canvas coordinates
-        const scale = radius / 7; // Scale factor from 3D world to 2D canvas
         const listenerCanvasX = centerX + this.listenerPosition.x * scale;
         // Fix: Use + instead of - for correct forward/backward mapping
         const listenerCanvasY = centerY + this.listenerPosition.z * scale; // Corrected Y
@@ -1387,21 +1427,8 @@ class AudioVisualizer3D {
      * @param {boolean} isActive - Whether performer mode is active
      */
     setPerformerModeActive(isActive) {
-        const speakerPickerContainer = document.getElementById('speaker-picker-container');
-        if (speakerPickerContainer) {
-            if (isActive) {
-                speakerPickerContainer.classList.remove('hidden');
-            } else {
-                speakerPickerContainer.classList.add('hidden');
-                // Reset speaker selection when leaving performer mode
-                this.highlightSpeaker(-1);
-                // Reset the dropdown selection
-                const speakerSelect = document.getElementById('speaker-picker-select');
-                if (speakerSelect) {
-                    speakerSelect.value = "";
-                }
-            }
-        }
+        // This function is no longer needed as performer mode is removed
+        return;
     }
 }
 
@@ -1426,67 +1453,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Create and add speaker picker for Performer mode
-        const controlsContainer = document.getElementById('scene-container')?.parentElement || document.body; // Or a more specific controls div
-        const speakerPickerContainer = document.createElement('div');
-        speakerPickerContainer.id = 'speaker-picker-container';
-        speakerPickerContainer.style.position = 'absolute';
-        speakerPickerContainer.style.top = '150px';
-        speakerPickerContainer.style.left = '200px'
-        // speakerPickerContainer.style.right = '0px'; // Adjust positioning as needed
-        speakerPickerContainer.style.zIndex = '1000';
-        speakerPickerContainer.style.padding = '5px';
-        speakerPickerContainer.style.background = 'rgba(0,0,0,0.5)';
-        speakerPickerContainer.style.color = 'white';
-        speakerPickerContainer.style.borderRadius = '5px';
-        // TODO: The visibility of this picker should be tied to "Performer" mode.
-        // Example: if (currentMode === 'performer') speakerPickerContainer.style.display = 'block'; else speakerPickerContainer.style.display = 'none';
-
-
-        const pickerLabel = document.createElement('label');
-        pickerLabel.htmlFor = 'speaker-picker-select';
-        pickerLabel.textContent = 'View from Speaker: ';
-        pickerLabel.style.marginRight = '5px';
-
-        const speakerSelect = document.createElement('select');
-        speakerSelect.id = 'speaker-picker-select';
-        
-        const defaultOption = document.createElement('option');
-        defaultOption.value = "";
-        defaultOption.textContent = "-- Select Speaker --";
-        speakerSelect.appendChild(defaultOption);
-
-        if (window.visualizer3D && window.visualizer3D.speakers) {
-            window.visualizer3D.speakers.forEach((speaker, index) => {
-                const option = document.createElement('option');
-                option.value = index.toString();
-                // Speaker numbers are 1-based in the visualization
-                option.textContent = `Speaker ${speaker.userData.index + 1}`; 
-                speakerSelect.appendChild(option);
-            });
-        }
-
-        speakerSelect.addEventListener('change', (event) => {
-            if (window.visualizer3D && event.target.value !== "") {
-                const selectedIndex = parseInt(event.target.value, 10);
-                window.visualizer3D.moveToSpeakerPosition(selectedIndex);
-            } else if (window.visualizer3D && event.target.value === "") {
-                // Optional: Reset view or clear highlight if "Select Speaker" is chosen
-                // window.visualizer3D.resetOrientation(); // Or just clear highlights
-                window.visualizer3D.highlightSpeaker(-1); // Clear highlights
-            }
-        });
-
-        speakerPickerContainer.appendChild(pickerLabel);
-        speakerPickerContainer.appendChild(speakerSelect);
-        
-        // Insert before the reset button if it exists, otherwise append to controls container
-        if (resetButton && resetButton.parentElement) {
-            resetButton.parentElement.insertBefore(speakerPickerContainer, resetButton);
-        } else {
-            controlsContainer.appendChild(speakerPickerContainer);
-        }
-        
         // Initialize with the current mode
         const activeBtn = document.querySelector('.mode-btn.active');
         if (activeBtn) {

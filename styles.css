@@ -603,33 +603,6 @@ input:checked + .slider:before {
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
 }
 
-/* Performer Mode Specific Styles */
-.performer-view {
-    display: none;
-    position: absolute;
-    bottom: 210px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 80%;
-    height: 100px;
-    background-color: rgba(0, 0, 0, 0.7);
-    border: 1px solid #e69138;
-    border-radius: 10px;
-    padding: 10px;
-    box-shadow: 0 0 15px rgba(230, 145, 56, 0.5);
-}
-
-.performer-view.active {
-    display: block;
-}
-
-.performer-cue {
-    color: #e69138;
-    font-size: 24px;
-    text-align: center;
-    margin-top: 20px;
-}
-
 /* Volume Display Panel Styles */
 #volume-display-panel {
     position: absolute;
@@ -891,10 +864,9 @@ input:checked + .slider:before {
 }
 
 /* Class to hide the minimized scene container */
-#scene-container.minimized-view-hidden {
+.minimized-view-hidden {
     display: none !important;
 }
-
 
 /* Engineer mode: Make 3D view smaller */
 #scene-container.minimized {

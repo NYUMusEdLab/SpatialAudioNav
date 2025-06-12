@@ -17,7 +17,6 @@ const posX = 0, posY = 1.7, posZ = 0;
 let currentMode = 'audience'; // Default to audience mode
 let currentScene = 'default';
 let isMixingMode = false;
-let currentPerformerSpeakerIndex = 0; // For performer mode
 let toggleMin3DViewBtn = null; // Declare variable for the toggle button
 
 // Audio effects for special scenes
@@ -132,19 +131,8 @@ window.presets = timestampPatterns.default.patterns;
 // Mode-specific positions
 const modePositions = {
     engineer: { x: 0, y: 2.5, z: 0 }, // Center of the room, slightly higher, not too high
-    audience: { x: 0, y: 1.7, z: 2 },  // Back of the room
-    performer: { x: 0, y: 1.7, z: -2 } // Front of the room (will be overridden)
+    audience: { x: 0, y: 1.7, z: 2 }  // Back of the room
 };
-
-// Speaker positions for performer mode
-const speakerPositions = [
-    { angle: 210, x: -6.1, y: 1.7, z: -3.5 }, // Speaker 1 (left front)
-    { angle: 150, x: 6.1, y: 1.7, z: -3.5 },  // Speaker 2 (right front)
-    { angle: 90, x: 7, y: 1.7, z: 0 },       // Speaker 3 (right)
-    { angle: 30, x: 6.1, y: 1.7, z: 3.5 },   // Speaker 4 (right back)
-    { angle: 330, x: -6.1, y: 1.7, z: 3.5 }, // Speaker 5 (left back)
-    { angle: 270, x: -7, y: 1.7, z: 0 }      // Speaker 6 (left)
-];
 
 // Pattern switching variables
 let patternInterval = null;
@@ -214,14 +202,7 @@ function initAudioContext() {
 function updateListenerPosition() {
     if (!audioCtx || !audioCtx.listener) return;
     
-    let position;
-    
-    // For performer mode, use the position of the selected speaker
-    if (currentMode === 'performer' && speakerPositions[currentPerformerSpeakerIndex]) {
-        position = speakerPositions[currentPerformerSpeakerIndex];
-    } else {
-        position = modePositions[currentMode];
-    }
+    const position = modePositions[currentMode];
     
     // Set listener position
     const listener = audioCtx.listener;
@@ -240,16 +221,6 @@ function updateListenerPosition() {
     
     if (currentMode === 'audience') {
         forwardZ = -1; // facing forward
-    } else if (currentMode === 'performer') {
-        // Calculate direction vector pointing toward the center
-        forwardX = -position.x;
-        forwardZ = -position.z;
-        // Normalize the vector
-        const length = Math.sqrt(forwardX * forwardX + forwardZ * forwardZ);
-        if (length > 0) {
-            forwardX /= length;
-            forwardZ /= length;
-        }
     }
     
     if (listener.forwardX) {
@@ -984,9 +955,9 @@ function toggleVolumeDisplayVisibility(scene) {
     }
 }
 
-// Function to change the mode (engineer, audience, performer)
+// Function to change the mode (engineer, audience)
 function setMode(mode) {
-    if (!['engineer', 'audience', 'performer'].includes(mode)) return;
+    if (!['engineer', 'audience'].includes(mode)) return;
     
     currentMode = mode;
     updateListenerPosition();
@@ -998,21 +969,6 @@ function setMode(mode) {
         btn.classList.toggle('active', btn.dataset.mode === mode);
     });
     
-    // Show/hide performer-specific UI
-    const performerDropdown = document.getElementById('performer-dropdown-container');
-    if (performerDropdown) {
-        performerDropdown.style.display = mode === 'performer' ? 'block' : 'none';
-    }
-    
-    // Disable manual controls in performer mode
-    if (mode === 'performer') {
-        const mixModeToggle = document.querySelector('#mixModeToggle');
-        if (mixModeToggle) {
-            mixModeToggle.checked = false;
-            isMixingMode = false;
-        }
-    }
-    
     // Handle view swapping for different modes
     const sceneContainer = document.getElementById('scene-container');
     const topdownView = document.querySelector('.topdown-view');
@@ -1020,7 +976,7 @@ function setMode(mode) {
     console.log('Elements found:', { 
         sceneContainer: !!sceneContainer, 
         topdownView: !!topdownView 
-    }); // Debug log
+    });
     
     if (sceneContainer && topdownView) {
         // In engineer mode, make 2D view bigger and 3D view smaller
@@ -1059,8 +1015,6 @@ function setMode(mode) {
             console.log('Dispatching resize event'); // Debug log
             window.dispatchEvent(new Event('resize'));
         }, 50);
-    } else {
-        console.error('Could not find necessary elements for view switching'); // Error log if elements missing
     }
     
     // Reset view in 3D visualization
@@ -1071,17 +1025,10 @@ function setMode(mode) {
         if (mode === 'audience' && window.visualizer3D.moveCamera) {
             window.visualizer3D.moveCamera(0, 1.7, 0.5);
         } 
-        // if (mode === 'audience' && window.visualizer3D.moveCamera) {
-        //     window.visualizer3D.moveCamera(0, 1.7, 2);
-        // } 
         
         // For engineer mode, position higher looking down
         else if (mode === 'engineer' && window.visualizer3D.moveCamera) {
             window.visualizer3D.moveCamera(0, 2.5, 0); // Lower height to keep things visible
-        }
-        // For performer mode, position at the selected speaker
-        else if (mode === 'performer' && window.visualizer3D.moveToSpeakerPosition) {
-            window.visualizer3D.moveToSpeakerPosition(currentPerformerSpeakerIndex);
         }
     }
     
@@ -1218,14 +1165,6 @@ function setScene(scene) {
 function setMixingMode(enabled) {
     isMixingMode = enabled;
     
-    // In performer mode, always disable mixing
-    if (currentMode === 'performer') {
-        isMixingMode = false;
-    }
-    
-    // Update UI
-    document.querySelector('#mixModeToggle').checked = isMixingMode;
-    
     // If turning off mix mode, reapply current pattern
     if (!isMixingMode) {
         applyPattern(currentPatternIndex);
@@ -1275,20 +1214,6 @@ document.addEventListener('DOMContentLoaded', () => {
             setMode(btn.dataset.mode);
         });
     });
-    
-    // Set up performer speaker selection
-    const performerSelect = document.getElementById('performer-speaker-select');
-    if (performerSelect) {
-        performerSelect.addEventListener('change', () => {
-            currentPerformerSpeakerIndex = parseInt(performerSelect.value);
-            if (currentMode === 'performer') {
-                updateListenerPosition();
-                if (window.visualizer3D && window.visualizer3D.moveToSpeakerPosition) {
-                    window.visualizer3D.moveToSpeakerPosition(currentPerformerSpeakerIndex);
-                }
-            }
-        });
-    }
     
     // Set up scene selection
     document.querySelectorAll('.scene-btn').forEach(btn => {
@@ -1495,92 +1420,3 @@ window.addEventListener('keyup', (e) => handleEngineerSpeakerKeys(e, false));
 function resetEngineerSpeakerKeys() {
     engineerSpeakerKeys = [false, false, false, false, false, false];
 }
-
-// // Function to change the mode (engineer, audience, performer)
-// function setMode(mode) {
-//     if (!['engineer', 'audience', 'performer'].includes(mode)) return;
-    
-//     currentMode = mode;
-//     updateListenerPosition();
-    
-//     // Update UI
-//     document.querySelectorAll('.mode-btn').forEach(btn => {
-//         btn.classList.toggle('active', btn.dataset.mode === mode);
-//     });
-    
-//     // Show/hide performer-specific UI
-//     const performerDropdown = document.getElementById('performer-dropdown-container');
-//     if (performerDropdown) {
-//         performerDropdown.style.display = mode === 'performer' ? 'block' : 'none';
-//     }
-    
-//     // Disable manual controls in performer mode
-//     if (mode === 'performer') {
-//         const mixModeToggle = document.querySelector('#mixModeToggle');
-//         if (mixModeToggle) {
-//             mixModeToggle.checked = false;
-//             isMixingMode = false;
-//         }
-//     }
-    
-//     // Handle view swapping for different modes
-//     const sceneContainer = document.getElementById('scene-container');
-//     const topdownView = document.querySelector('.topdown-view');
-    
-//     if (sceneContainer && topdownView) {
-//         // In engineer mode, make 2D view bigger and 3D view smaller
-//         if (mode === 'engineer') {
-//             sceneContainer.classList.add('minimized');
-//             topdownView.classList.add('expanded');
-//         } else {
-//             sceneContainer.classList.remove('minimized');
-//             topdownView.classList.remove('expanded');
-//         }
-        
-//         // Force a resize event after a short delay to ensure proper rendering after class changes
-//         setTimeout(() => {
-//             window.dispatchEvent(new Event('resize'));
-//         }, 50);
-//     }
-    
-//     // Reset view in 3D visualization
-//     if (window.visualizer3D) {
-//         window.visualizer3D.resetOrientation();
-        
-//         // For audience mode, move back
-//         if (mode === 'audience' && window.visualizer3D.moveCamera) {
-//             window.visualizer3D.moveCamera(0, 1.7, 0.5);
-//         } 
-//         // if (mode === 'audience' && window.visualizer3D.moveCamera) {
-//         //     window.visualizer3D.moveCamera(0, 1.7, 2);
-//         // } 
-        
-//         // For engineer mode, position higher looking down
-//         else if (mode === 'engineer' && window.visualizer3D.moveCamera) {
-//             window.visualizer3D.moveCamera(0, 2.5, 0); // Lower height to keep things visible
-//         }
-//         // For performer mode, position at the selected speaker
-//         else if (mode === 'performer' && window.visualizer3D.moveToSpeakerPosition) {
-//             window.visualizer3D.moveToSpeakerPosition(currentPerformerSpeakerIndex);
-//         }
-//     }
-    
-//     // Reset engineer speaker keys when changing mode
-//     if (mode !== 'engineer') {
-//         resetEngineerSpeakerKeys();
-//     }
-    
-//     // Update the pattern for current time position
-//     if (!currentAudioElement.paused) {
-//         const currentTime = currentAudioElement.currentTime;
-        
-//         const timestamps = timestampPatterns[currentScene].timestamps;
-//         let newIndex = timestamps.findIndex((timestamp, index) => {
-//             const nextTimestamp = timestamps[index + 1] || Infinity;
-//             return currentTime >= timestamp && currentTime < nextTimestamp;
-//         });
-        
-//         if (newIndex === -1) newIndex = 0;
-//         applyPattern(newIndex);
-//     }
-// }
