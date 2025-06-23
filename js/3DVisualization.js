@@ -1455,8 +1455,6 @@ class AudioVisualizer3D {
     }
 }
 
-
-
 // Initialize the 3D visualizer when the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', () => {
     // Wait a moment to ensure all DOM elements are ready
