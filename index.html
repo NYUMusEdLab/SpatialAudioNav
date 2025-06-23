@@ -111,6 +111,19 @@
         <!-- Add Volume Display Toggle Button -->
         <button id="volumeDisplayBtn" title="Toggle Volume Display" style="display: none;">Volume</button>
         
+        <!-- Dry/Wet Control for Strophe V -->
+        <div id="dryWetControl" style="display: none;">
+            <div class="control-label">Piano Resonance</div>
+            <div class="slider-container">
+                <input type="range" id="dryWetSlider" min="0" max="100" value="0" class="dry-wet-slider">
+                <div class="slider-labels">
+                    <span>Dry</span>
+                    <span>Wet</span>
+                </div>
+            </div>
+            <div class="control-value" id="dryWetValue">0%</div>
+        </div>
+        
         <div class="topdown-view">
             <div class="view-label">2D View</div>
             <canvas id="topdown-canvas"></canvas>
@@ -217,6 +230,7 @@
     <audio id="transition1-2" src="audio/transition12.mp3" preload="auto" crossorigin="anonymous"></audio>
     <audio id="transition3-4" src="audio/transition34.mp3" preload="auto" crossorigin="anonymous"></audio>
     <audio id="stropheV" src="audio/strophe5dry.mp3" preload="auto" crossorigin="anonymous"></audio>
+    <audio id="stropheV-wet" src="audio/strophe5wet.mp3" preload="auto" crossorigin="anonymous"></audio>
     
     <script type="module" src="js/3DVisualization.js"></script>
     <script type="module" src="js/AudioVisualizer.js"></script>

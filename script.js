@@ -28,6 +28,14 @@ let dryWetMixer = null;
 let wetGain = null;
 let dryGain = null;
 
+// Strophe V specific variables
+let stropheWetAudioElement = null;
+let stropheWetAudioSource = null;
+let wetPanners = []; // Separate panners for wet signal
+let wetGainNodes = []; // Separate gain nodes for wet signal
+let manualWetAmount = 0; // 0-1, controlled by engineer
+let isStropheVPlaying = false;
+
 // Track which audio elements have already been connected to sources
 let connectedAudioElements = new Set();
 
@@ -48,6 +56,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     currentAudioElement = audioElements['default'];
     window.audioElement = currentAudioElement;
+    
+    // Get the wet audio element for Strophe V
+    stropheWetAudioElement = document.getElementById('stropheV-wet');
 });
 
 // Audio timestamps and patterns
@@ -283,10 +294,32 @@ function setupWebAudio() {
         currentAudioElement = newAudio;
         window.audioElement = currentAudioElement;
 
+        // For Strophe V, also create the wet audio element
+        if (currentScene === 'stropheV' && stropheWetAudioElement) {
+            // Remove old wet element if it exists
+            if (stropheWetAudioElement.parentNode) {
+                stropheWetAudioElement.parentNode.removeChild(stropheWetAudioElement);
+            }
+            // Create a new wet audio element
+            const newWetAudio = document.createElement('audio');
+            newWetAudio.id = 'stropheV-wet';
+            newWetAudio.src = 'audio/strophe5wet.mp3';
+            newWetAudio.preload = "auto";
+            newWetAudio.crossOrigin = "anonymous";
+            document.body.appendChild(newWetAudio);
+            stropheWetAudioElement = newWetAudio;
+        }
+
         // Now create the MediaElementSourceNode for the new element
         try {
             audioSource = audioCtx.createMediaElementSource(currentAudioElement);
             connectedAudioElements.add(currentAudioElement);
+            
+            // For Strophe V, also create the wet audio source
+            if (currentScene === 'stropheV' && stropheWetAudioElement) {
+                stropheWetAudioSource = audioCtx.createMediaElementSource(stropheWetAudioElement);
+                connectedAudioElements.add(stropheWetAudioElement);
+            }
             
             // Continue with the rest of the setup
             createAudioGraph().then(resolve).catch(reject);
@@ -323,6 +356,22 @@ function createAudioGraph() {
             gainNodes = panners.map(() => new GainNode(audioCtx, { gain: 0 }));
             window.gainNodes = gainNodes;
             masterGain = new GainNode(audioCtx, { gain: 0.8 });
+            
+            // For Strophe V, create additional panners and gain nodes for wet signal
+            if (currentScene === 'stropheV') {
+                wetPanners = sources.map(source => {
+                    return new PannerNode(audioCtx, {
+                        panningModel: "HRTF",
+                        distanceModel: "inverse",
+                        positionX: source.x,
+                        positionY: source.y,
+                        positionZ: source.z,
+                        refDistance: 2,
+                        maxDistance: 10
+                    });
+                });
+                wetGainNodes = wetPanners.map(() => new GainNode(audioCtx, { gain: 0 }));
+            }
             
             // Create circular panner for Transition 3-4
             setupCircularPanner();
@@ -376,36 +425,19 @@ function setupCircularPanner() {
     };
 }
 
-// Setup resonator for strophe V
+// Setup dry/wet mixing for Strophe V
 function setupResonator() {
     if (!audioCtx) return;
     
-    // Create a convolver node for resonance effect
-    resonator = audioCtx.createConvolver();
-    
-    // Create a buffer for the impulse response
-    const sampleRate = audioCtx.sampleRate;
-    const bufferLength = 2 * sampleRate; // 2 seconds
-    const buffer = audioCtx.createBuffer(2, bufferLength, sampleRate);
-    
-    // Generate impulse response for piano-like resonance
-    for (let channel = 0; channel < 2; channel++) {
-        const data = buffer.getChannelData(channel);
-        for (let i = 0; i < bufferLength; i++) {
-            // Exponential decay
-            data[i] = (Math.random() * 2 - 1) * Math.pow(0.5, i / (bufferLength / 50));
-        }
-    }
-    
-    // Set the buffer to the convolver
-    resonator.buffer = buffer;
-    
-    // Create dry/wet mixer
+    // Create dry/wet mixer gain nodes
     dryGain = audioCtx.createGain();
     wetGain = audioCtx.createGain();
     
+    // Initialize with dry signal only
     dryGain.gain.value = 1.0;
     wetGain.gain.value = 0.0;
+    
+    console.log("Dry/wet mixer setup complete for Strophe V");
 }
 
 // Connect audio nodes based on the current scene
@@ -415,8 +447,11 @@ function connectAudioNodes() {
     // Clear existing connections
     try {
         audioSource.disconnect();
+        if (stropheWetAudioSource) stropheWetAudioSource.disconnect();
         panners.forEach(panner => panner.disconnect());
         gainNodes.forEach(gain => gain.disconnect());
+        if (wetPanners.length) wetPanners.forEach(panner => panner.disconnect());
+        if (wetGainNodes.length) wetGainNodes.forEach(gain => gain.disconnect());
         if (resonator) resonator.disconnect();
         if (dryGain) dryGain.disconnect();
         if (wetGain) wetGain.disconnect();
@@ -425,22 +460,41 @@ function connectAudioNodes() {
         // Ignore disconnect errors
     }
     
-    // Basic connection for all scenes
-    panners.forEach((panner, index) => {
-        audioSource.connect(panner);
-        panner.connect(gainNodes[index]);
-        gainNodes[index].connect(masterGain);
-    });
-    
-    // Scene-specific routing
     if (currentScene === "stropheV") {
-        // Strophe V uses dry/wet mixing with resonator
-        audioSource.connect(dryGain);
-        dryGain.connect(masterGain);
-        
-        audioSource.connect(resonator);
-        resonator.connect(wetGain);
-        wetGain.connect(masterGain);
+        // Strophe V uses dual audio sources with dry/wet mixing
+        if (stropheWetAudioSource && wetPanners.length && wetGainNodes.length) {
+            // Connect dry source (main audio element) through speakers to dry gain
+            panners.forEach((panner, index) => {
+                audioSource.connect(panner);
+                panner.connect(gainNodes[index]);
+                gainNodes[index].connect(dryGain);
+            });
+            dryGain.connect(masterGain);
+            
+            // Connect wet source through separate wet panners to wet gain
+            wetPanners.forEach((panner, index) => {
+                stropheWetAudioSource.connect(panner);
+                panner.connect(wetGainNodes[index]);
+                // Copy the gain values from the dry signal
+                wetGainNodes[index].gain.value = gainNodes[index].gain.value;
+                wetGainNodes[index].connect(wetGain);
+            });
+            wetGain.connect(masterGain);
+        } else {
+            // Fallback to single source if wet source isn't available
+            panners.forEach((panner, index) => {
+                audioSource.connect(panner);
+                panner.connect(gainNodes[index]);
+                gainNodes[index].connect(masterGain);
+            });
+        }
+    } else {
+        // Basic connection for all other scenes
+        panners.forEach((panner, index) => {
+            audioSource.connect(panner);
+            panner.connect(gainNodes[index]);
+            gainNodes[index].connect(masterGain);
+        });
     }
     
     masterGain.connect(audioCtx.destination);
@@ -452,6 +506,11 @@ function playSpeaker(pattern) {
     pattern.forEach((gain, idx) => {
         if (gainNodes[idx]) {
             gainNodes[idx].gain.setTargetAtTime(gain, audioCtx ? audioCtx.currentTime : 0, 0.1);
+            
+            // For Strophe V, also update the wet gain nodes
+            if (currentScene === 'stropheV' && wetGainNodes[idx]) {
+                wetGainNodes[idx].gain.setTargetAtTime(gain, audioCtx ? audioCtx.currentTime : 0, 0.1);
+            }
         }
     });
     // Update 3D visualization if available
@@ -501,32 +560,74 @@ function actuallyTogglePlayback() {
     if (playPauseButton.dataset.playing === 'false') {
         console.log("Attempting to play audio...");
         
-        const playPromise = currentAudioElement.play();
-        if (playPromise !== undefined) {
-            playPromise.then(() => {
-                console.log("Audio playback started successfully!");
-                playPauseButton.dataset.playing = 'true';
-                playPauseButton.style.setProperty('--play-pause-icon', '"\\23F8"');
-                playPauseButton.title = "Pause Audio";
-                
-                if (audioInitialized) {
-                    startPatternSwitching();
-                    startSpecialEffects();
-                }
-            }).catch(error => {
-                console.error("Error playing audio:", error);
-                tryDirectPlayback();
-            });
+        if (currentScene === 'stropheV' && stropheWetAudioElement) {
+            // For Strophe V, synchronize both dry and wet audio
+            playStropheVSynchronized();
+        } else {
+            // Normal single audio playback
+            const playPromise = currentAudioElement.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    console.log("Audio playback started successfully!");
+                    playPauseButton.dataset.playing = 'true';
+                    playPauseButton.style.setProperty('--play-pause-icon', '"\\23F8"');
+                    playPauseButton.title = "Pause Audio";
+                    
+                    if (audioInitialized) {
+                        startPatternSwitching();
+                        startSpecialEffects();
+                    }
+                }).catch(error => {
+                    console.error("Error playing audio:", error);
+                    tryDirectPlayback();
+                });
+            }
         }
     } else {
         console.log("Pausing audio");
-        currentAudioElement.pause();
+        if (currentScene === 'stropheV' && stropheWetAudioElement) {
+            // Pause both dry and wet audio for Strophe V
+            currentAudioElement.pause();
+            stropheWetAudioElement.pause();
+            isStropheVPlaying = false;
+        } else {
+            currentAudioElement.pause();
+        }
+        
         playPauseButton.dataset.playing = 'false';
         playPauseButton.style.setProperty('--play-pause-icon', '"\\25B6"');
         playPauseButton.title = "Play Audio";
         stopPatternSwitching();
         stopSpecialEffects();
     }
+}
+
+// Function to play both dry and wet audio for Strophe V in sync
+function playStropheVSynchronized() {
+    // Set both audio elements to the same time
+    const currentTime = currentAudioElement.currentTime;
+    stropheWetAudioElement.currentTime = currentTime;
+    
+    // Play both simultaneously
+    const dryPromise = currentAudioElement.play();
+    const wetPromise = stropheWetAudioElement.play();
+    
+    Promise.all([dryPromise, wetPromise]).then(() => {
+        console.log("Strophe V synchronized playback started!");
+        playPauseButton.dataset.playing = 'true';
+        playPauseButton.style.setProperty('--play-pause-icon', '"\\23F8"');
+        playPauseButton.title = "Pause Audio";
+        isStropheVPlaying = true;
+        
+        if (audioInitialized) {
+            startPatternSwitching();
+            startSpecialEffects();
+            startStropheVCrossfading();
+        }
+    }).catch(error => {
+        console.error("Error playing Strophe V synchronized audio:", error);
+        tryDirectPlayback();
+    });
 }
 
 // Last resort direct playback
@@ -575,6 +676,14 @@ resetButton.addEventListener('click', () => {
     const wasPlaying = playPauseButton.dataset.playing === 'true';
     currentAudioElement.pause();
     currentAudioElement.currentTime = 0;
+    
+    // For Strophe V, also reset the wet audio element
+    if (currentScene === 'stropheV' && stropheWetAudioElement) {
+        stropheWetAudioElement.pause();
+        stropheWetAudioElement.currentTime = 0;
+        isStropheVPlaying = false;
+    }
+    
     updateArabicPlayhead(); // Reset playhead position
 
     playPauseButton.dataset.playing = 'false';
@@ -584,6 +693,11 @@ resetButton.addEventListener('click', () => {
     applyPattern(currentPatternIndex);
     stopPatternSwitching();
     stopSpecialEffects();
+    
+    // Reset dry/wet control to dry
+    if (currentScene === 'stropheV') {
+        setDryWetAmount(0);
+    }
     
     if (window.visualizer3D) {
         window.visualizer3D.resetOrientation();
@@ -694,6 +808,12 @@ function handleSeek(event) {
         // Ensure the new time is within valid bounds (important for some browsers/formats)
         const clampedTime = Math.max(0, Math.min(newTime, currentAudioElement.duration));
         currentAudioElement.currentTime = clampedTime;
+        
+        // For Strophe V, also set the wet audio element's time
+        if (currentScene === 'stropheV' && stropheWetAudioElement) {
+            stropheWetAudioElement.currentTime = clampedTime;
+        }
+        
         console.log("handleSeek: currentTime set successfully to:", clampedTime); // Log success
     } catch (e) {
         console.error("handleSeek: Error setting currentTime:", e); // Log error
@@ -1066,6 +1186,9 @@ function setMode(mode) {
         }
     }
     
+    // Toggle dry/wet control visibility
+    toggleDryWetControlVisibility();
+    
     // Reset engineer speaker keys when changing mode
     if (mode !== 'engineer') {
         resetEngineerSpeakerKeys();
@@ -1109,6 +1232,9 @@ function setScene(scene) {
     
     // Toggle volume display visibility based on scene
     toggleVolumeDisplayVisibility(scene);
+    
+    // Toggle dry/wet control visibility based on scene and mode
+    toggleDryWetControlVisibility();
     
     // Update global variables for access from other components
     window.timestamps = timestampPatterns[scene].timestamps;
@@ -1480,4 +1606,169 @@ window.addEventListener('keyup', (e) => handleEngineerSpeakerKeys(e, false));
 // When leaving engineer mode, reset speaker keys and pattern
 function resetEngineerSpeakerKeys() {
     engineerSpeakerKeys = [false, false, false, false, false, false];
+}
+
+// Function to start the automatic crossfading for Strophe V
+function startStropheVCrossfading() {
+    if (currentScene !== 'stropheV' || !isStropheVPlaying) return;
+    
+    // Start the crossfading animation
+    requestAnimationFrame(updateStropheVCrossfade);
+}
+
+// Function to update the automatic crossfade based on time
+function updateStropheVCrossfade() {
+    if (currentScene !== 'stropheV' || !isStropheVPlaying || !currentAudioElement || !dryGain || !wetGain) return;
+    
+    const currentTime = currentAudioElement.currentTime;
+    const duration = currentAudioElement.duration || 10; // fallback duration
+    
+    let automaticWetAmount = 0;
+    
+    // Calculate automatic crossfade curve based on the score
+    // This creates a curve that starts at 0%, peaks at 80-100% around 70% of the piece, then returns to 0%
+    const normalizedTime = currentTime / duration;
+    
+    if (normalizedTime < 0.2) {
+        // First 20%: Stay completely dry
+        automaticWetAmount = 0;
+    } else if (normalizedTime < 0.7) {
+        // 20% to 70%: Gradual increase to wet
+        const progress = (normalizedTime - 0.2) / 0.5; // 0 to 1
+        automaticWetAmount = Math.sin(progress * Math.PI * 0.5) * 1.0; // Smooth curve to 100%
+    } else if (normalizedTime < 0.9) {
+        // 70% to 90%: Stay at peak wetness
+        automaticWetAmount = 1.0;
+    } else {
+        // 90% to 100%: Return to dry
+        const progress = (normalizedTime - 0.9) / 0.1; // 0 to 1
+        automaticWetAmount = 1.0 - (progress * progress); // Smooth curve back to 0%
+    }
+    
+    // In engineer mode, use manual control instead of automatic
+    let finalWetAmount = automaticWetAmount;
+    if (currentMode === 'engineer') {
+        finalWetAmount = manualWetAmount;
+    }
+    
+    // Apply the crossfade
+    const dryAmount = 1.0 - finalWetAmount;
+    
+    dryGain.gain.setTargetAtTime(dryAmount, audioCtx.currentTime, 0.05);
+    wetGain.gain.setTargetAtTime(finalWetAmount, audioCtx.currentTime, 0.05);
+}
+
+// Function to smoothly ramp between dry/wet values
+function rampDryWetAmount(startValue, targetValue, duration) {
+    const startTime = Date.now();
+    const difference = targetValue - startValue;
+    
+    function updateRamp() {
+        const elapsed = (Date.now() - startTime) / 1000; // Convert to seconds
+        const progress = Math.min(elapsed / duration, 1); // Clamp to 1
+        
+        // Use smooth easing curve
+        const easedProgress = progress * progress * (3 - 2 * progress); // Smooth step
+        const currentValue = startValue + (difference * easedProgress);
+        
+        setDryWetAmount(currentValue);
+        
+        if (progress < 1) {
+            requestAnimationFrame(updateRamp);
+        }
+    }
+    
+    requestAnimationFrame(updateRamp);
+}
+
+// Set up dry/wet control for Strophe V
+const dryWetSlider = document.getElementById('dryWetSlider');
+const dryWetValue = document.getElementById('dryWetValue');
+
+if (dryWetSlider) {
+    dryWetSlider.addEventListener('input', (e) => {
+        const value = parseFloat(e.target.value) / 100; // Convert to 0-1 range
+        setDryWetAmount(value);
+    });
+}
+
+// Set up keyboard controls for dry/wet (numbers 0-9)
+let keyboardDryWetTimeout = null;
+
+// Handle keydown events for smooth ramping
+window.addEventListener('keydown', (e) => {
+    // Only handle keyboard controls in engineer mode for Strophe V
+    if (currentMode !== 'engineer' || currentScene !== 'stropheV') return;
+    
+    // Handle number keys 0-9 for dry/wet control
+    const key = e.key;
+    if (key >= '0' && key <= '9') {
+        e.preventDefault();
+        const targetValue = parseInt(key) / 9; // Convert 0-9 to 0.0-1.0 range
+        
+        // Clear any existing timeout
+        if (keyboardDryWetTimeout) {
+            clearTimeout(keyboardDryWetTimeout);
+        }
+        
+        // Smooth ramp to the new value
+        rampDryWetAmount(manualWetAmount, targetValue, 0.3); // 300ms ramp
+    }
+});
+
+// Function to manually ramp the dry/wet amount
+function rampDryWetAmount(from, to, duration) {
+    if (!dryGain || !wetGain) return;
+    
+    const startTime = audioCtx.currentTime;
+    const endTime = startTime + duration;
+    
+    // Linear ramp for dry/wet amount
+    dryGain.gain.setValueAtTime(from, startTime);
+    dryGain.gain.linearRampToValueAtTime(1.0 - to, endTime);
+    
+    wetGain.gain.setValueAtTime(to, startTime);
+    wetGain.gain.linearRampToValueAtTime(to, endTime);
+}
+
+// Function to set the dry/wet amount directly
+function setDryWetAmount(amount) {
+    manualWetAmount = Math.max(0, Math.min(1, amount)); // Clamp between 0 and 1
+    
+    // Update the UI
+    const slider = document.getElementById('dryWetSlider');
+    const valueDisplay = document.getElementById('dryWetValue');
+    
+    if (slider) {
+        slider.value = manualWetAmount * 100;
+    }
+    
+    if (valueDisplay) {
+        valueDisplay.textContent = Math.round(manualWetAmount * 100) + '%';
+    }
+    
+    // If in engineer mode and Strophe V is playing, immediately apply the change
+    if (currentMode === 'engineer' && currentScene === 'stropheV' && isStropheVPlaying && dryGain && wetGain) {
+        const dryAmount = 1.0 - manualWetAmount;
+        dryGain.gain.setTargetAtTime(dryAmount, audioCtx.currentTime, 0.05);
+        wetGain.gain.setTargetAtTime(manualWetAmount, audioCtx.currentTime, 0.05);
+    }
+}
+
+// Initialize dry/wet control when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize the dry/wet control visibility
+    toggleDryWetControlVisibility();
+    
+    // Set initial dry/wet value
+    setDryWetAmount(0);
+});
+
+// Function to show/hide the dry/wet control based on scene and mode
+function toggleDryWetControlVisibility() {
+    const dryWetControl = document.getElementById('dryWetControl');
+    if (!dryWetControl) return;
+    
+    const shouldShow = currentScene === 'stropheV' && currentMode === 'engineer';
+    dryWetControl.style.display = shouldShow ? 'block' : 'none';
 }
