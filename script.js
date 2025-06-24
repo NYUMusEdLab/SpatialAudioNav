@@ -1076,6 +1076,14 @@ function updateVolumeDisplay() {
         volumeGroup.setAttribute('data-active', gain > 0.6 ? 'true' : 'false');
     }
 }
+function toggle3DViewHandler() {
+    const sceneContainer = document.getElementById('scene-container');
+    if (!sceneContainer) return;
+    const hiddenClass = 'minimized-view-hidden';
+    sceneContainer.classList.toggle(hiddenClass);
+    toggleMin3DViewBtn.textContent = sceneContainer.classList.contains(hiddenClass) ? 'Show 3D View' : 'Hide 3D View';
+    setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+}
 
 // Function to show/hide volume display controls based on scene
 function toggleVolumeDisplayVisibility(scene) {
@@ -1096,16 +1104,39 @@ function toggleVolumeDisplayVisibility(scene) {
 
 // Function to change the mode (engineer, audience)
 function setMode(mode) {
-    if (!['engineer', 'audience'].includes(mode)) return;
+    if (!['engineer', 'audience', 'performer'].includes(mode)) return;
     
     currentMode = mode;
     updateListenerPosition();
     
     console.log(`Setting mode to: ${mode}`); // Debug log
     
-    // Update UI
+   /*
     document.querySelectorAll('.mode-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.mode === mode);
+    });
+    */
+
+    // Update UI
+    document.querySelectorAll('.mode-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            const mode = button.dataset.mode;
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            button.classList.add('active');
+
+            if (window.visualizer3D) {
+                if (mode === 'performer') {
+                    window.visualizer3D.moveToPerformerPerspective();
+                    window.visualizer3D.setPerformerModeActive(true);
+                } else if (mode === 'engineer') {
+                    window.visualizer3D.resetOrientation();
+                    window.visualizer3D.setPerformerModeActive(false);
+                } else if (mode === 'audience') {
+                    // Set audience camera position or logic here
+                    window.visualizer3D.setPerformerModeActive(false);
+                }
+            }
+        });
     });
     
     // Handle view swapping for different modes
@@ -1123,9 +1154,14 @@ function setMode(mode) {
             console.log('Adding minimized/expanded classes');
             sceneContainer.classList.add('minimized');
             topdownView.classList.add('expanded');
-            if (toggleMin3DViewBtn) toggleMin3DViewBtn.style.display = 'block';
+            // if (toggleMin3DViewBtn) toggleMin3DViewBtn.style.display = 'block';
             if (window.visualizer3D && window.visualizer3D.setEngineerViewOptimizedForMinimized) {
                 window.visualizer3D.setEngineerViewOptimizedForMinimized(true);
+            }
+            if (toggleMin3DViewBtn) {
+                toggleMin3DViewBtn.style.display = 'none';
+                toggleMin3DViewBtn.disabled = true;
+                toggleMin3DViewBtn.removeEventListener('click', toggle3DViewHandler);
             }
             // Ensure 3D view is visible by default when switching to engineer mode
             sceneContainer.classList.remove('minimized-view-hidden');
@@ -1183,6 +1219,18 @@ function setMode(mode) {
         // For engineer mode, position higher looking down
         else if (mode === 'engineer' && window.visualizer3D.moveCamera) {
             window.visualizer3D.moveCamera(0, 2.5, 0); // Lower height to keep things visible
+        }
+        else if (mode === 'performer' && window.visualizer3D.moveCamera) {
+            // Place between Speakers 1 and 2
+            window.visualizer3D.moveCamera(0, 1.7, -1); // z = -1 is front (performer position)
+
+            if (window.visualizer3D && window.visualizer3D.moveToPerformerPerspective) {
+                window.visualizer3D.moveToPerformerPerspective();
+            }
+            // Rotate to face back toward speakers 5 and 4
+            if (window.visualizer3D.camera) {
+                window.visualizer3D.camera.lookAt(new THREE.Vector3(0, 1.7, 1)); // look toward center back
+            }
         }
     }
     
@@ -1445,22 +1493,32 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Set up trivia button
+
     const triviaButton = document.getElementById('triviaButton');
     const triviaContainer = document.querySelector('.trivia-container');
     const closeTrivia = document.querySelector('.close-trivia');
-    
+    const titleContainer = document.getElementById('title-container'); // ✅ Add this line
+
+
     if (triviaButton && triviaContainer) {
         triviaButton.addEventListener('click', () => {
-            triviaContainer.style.display = 'flex';
+            const isVisible = triviaContainer.style.display === 'flex';
+            triviaContainer.style.display = isVisible ? 'none' : 'flex';
+            if (titleContainer) {
+                titleContainer.style.display = isVisible ? 'block' : 'none';
+            }
         });
     }
     
     if (closeTrivia && triviaContainer) {
         closeTrivia.addEventListener('click', () => {
             triviaContainer.style.display = 'none';
+            if (titleContainer) {
+                titleContainer.style.display = 'block';
+            }
         });
     }
-    
+
     // Set up trivia navigation
     document.querySelectorAll('.trivia-nav').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -1506,6 +1564,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Create and setup toggle button for minimized 3D view
+
     toggleMin3DViewBtn = document.createElement('button');
     toggleMin3DViewBtn.id = 'toggleMin3DViewBtn';
     toggleMin3DViewBtn.textContent = 'Hide 3D View';
@@ -1517,19 +1576,9 @@ document.addEventListener('DOMContentLoaded', () => {
         immersiveContainer.appendChild(toggleMin3DViewBtn);
     }
 
-    toggleMin3DViewBtn.addEventListener('click', () => {
-        const sceneContainer = document.getElementById('scene-container');
-        if (sceneContainer.classList.contains('minimized-view-hidden')) {
-            sceneContainer.classList.remove('minimized-view-hidden');
-            toggleMin3DViewBtn.textContent = 'Hide 3D View';
-            // Crucial: Dispatch resize for Three.js to re-render correctly in the now visible container
-            setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
-        } else {
-            sceneContainer.classList.add('minimized-view-hidden');
-            toggleMin3DViewBtn.textContent = 'Show 3D View';
-        }
-    });
-    
+    toggleMin3DViewBtn.addEventListener('click', toggle3DViewHandler);
+
+
     // Initialize mode and scene
     setMode('audience');
     setScene('default');
@@ -1769,7 +1818,8 @@ function setDryWetAmount(amount) {
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize the dry/wet control visibility
     toggleDryWetControlVisibility();
-    
+    toggleDryWetControlVisibility();
+
     // Set initial dry/wet value
     setDryWetAmount(0);
 });
