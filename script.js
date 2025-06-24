@@ -1096,7 +1096,7 @@ function toggleVolumeDisplayVisibility(scene) {
 
 // Function to change the mode (engineer, audience)
 function setMode(mode) {
-    if (!['engineer', 'audience'].includes(mode)) return;
+    if (!['engineer', 'audience', 'performer'].includes(mode)) return;
     
     currentMode = mode;
     updateListenerPosition();
@@ -1183,6 +1183,15 @@ function setMode(mode) {
         // For engineer mode, position higher looking down
         else if (mode === 'engineer' && window.visualizer3D.moveCamera) {
             window.visualizer3D.moveCamera(0, 2.5, 0); // Lower height to keep things visible
+        }
+        else if (mode === 'performer' && window.visualizer3D.moveCamera) {
+            // Place between Speakers 1 and 2
+            window.visualizer3D.moveCamera(0, 1.7, -1); // z = -1 is front (performer position)
+
+            // Rotate to face back toward speakers 5 and 4
+            if (window.visualizer3D.camera) {
+                window.visualizer3D.camera.lookAt(new THREE.Vector3(0, 1.7, 1)); // look toward center back
+            }
         }
     }
     
@@ -1759,7 +1768,8 @@ function setDryWetAmount(amount) {
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize the dry/wet control visibility
     toggleDryWetControlVisibility();
-    
+    toggleDryWetControlVisibility();
+
     // Set initial dry/wet value
     setDryWetAmount(0);
 });
