@@ -1188,6 +1188,9 @@ function setMode(mode) {
             // Place between Speakers 1 and 2
             window.visualizer3D.moveCamera(0, 1.7, -1); // z = -1 is front (performer position)
 
+            if (window.visualizer3D && window.visualizer3D.moveToPerformerPerspective) {
+                window.visualizer3D.moveToPerformerPerspective();
+            }
             // Rotate to face back toward speakers 5 and 4
             if (window.visualizer3D.camera) {
                 window.visualizer3D.camera.lookAt(new THREE.Vector3(0, 1.7, 1)); // look toward center back

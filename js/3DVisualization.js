@@ -1435,6 +1435,7 @@ class AudioVisualizer3D {
      * Toggles the visibility of the speaker picker based on performer mode
      * @param {boolean} isActive - Whether performer mode is active
      */
+
     setPerformerModeActive(isActive) {
             const speakerPickerContainer = document.getElementById('speaker-picker-container');
         if (speakerPickerContainer) {
@@ -1460,12 +1461,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Wait a moment to ensure all DOM elements are ready
     setTimeout(() => {
         window.visualizer3D = new AudioVisualizer3D();
-        
+
         // Connect visualizer to existing gain nodes if available
         if (window.gainNodes) {
             window.visualizer3D.updateSpeakers(window.gainNodes);
         }
-        
+
         // Add reset button functionality
         const resetButton = document.getElementById('resetButton');
         if (resetButton) {
@@ -1477,6 +1478,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Create and add speaker picker for Performer mode
+        /*
         const controlsContainer = document.getElementById('scene-container')?.parentElement || document.body; // Or a more specific controls div
         const speakerPickerContainer = document.createElement('div');
         speakerPickerContainer.id = 'speaker-picker-container';
@@ -1500,18 +1502,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const speakerSelect = document.createElement('select');
         speakerSelect.id = 'speaker-picker-select';
-        
+
         const defaultOption = document.createElement('option');
         defaultOption.value = "";
         defaultOption.textContent = "-- Select Location --";
         speakerSelect.appendChild(defaultOption);
-
+*/
         if (window.visualizer3D && window.visualizer3D.speakers) {
             window.visualizer3D.speakers.forEach((speaker, index) => {
                 const option = document.createElement('option');
                 option.value = index.toString();
                 // Speaker numbers are 1-based in the visualization
-                option.textContent = `Speaker ${speaker.userData.index + 1}`; 
+                option.textContent = `Speaker ${speaker.userData.index + 1}`;
                 speakerSelect.appendChild(option);
             });
         }
@@ -1529,14 +1531,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         speakerPickerContainer.appendChild(pickerLabel);
         speakerPickerContainer.appendChild(speakerSelect);
-        
+
         // Insert before the reset button if it exists, otherwise append to controls container
         if (resetButton && resetButton.parentElement) {
             resetButton.parentElement.insertBefore(speakerPickerContainer, resetButton);
         } else {
             controlsContainer.appendChild(speakerPickerContainer);
         }
-        
+
 
         // Initialize with the current mode
         const activeBtn = document.querySelector('.mode-btn.active');
