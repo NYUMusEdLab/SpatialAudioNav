@@ -829,22 +829,23 @@ input:checked + .slider:before {
 }
 /*
 /* Speaker Picker (Performer Mode) Styles */
-/* TODO: The visibility of #speaker-picker-container should be controlled by JS based on the current mode.
+/* TODO: The visibility of #speaker-picker-container should be controlled by JS based on the current mode. 
    Example: Add/remove a 'hidden' class.
 .hidden {
     display: none !important;
 }
+*/
 
 
 #speaker-picker-container {
 
-    background-color: rgba(0, 0, 0, 0.7); /* Consistent with other controls *
+    background-color: rgba(0, 0, 0, 0.7); /* Consistent with other controls */
     border: 1px solid #e69138;
     box-shadow: 0 0 15px rgba(230, 145, 56, 0.5);
-    display: flex; /* Align label and select nicely
+    display: flex; /* Align label and select nicely */
     align-items: center;
     padding: 8px 10px; /* Adjusted padding */
-    border-radius: 8px; /* Consistent border-radius
+    border-radius: 8px; /* Consistent border-radius */
 }
 
 #speaker-picker-container label {
