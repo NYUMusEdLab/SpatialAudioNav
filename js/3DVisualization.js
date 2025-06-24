@@ -164,8 +164,31 @@ class AudioVisualizer3D {
         centerCircle.position.y = -0.07; // Slightly above the grid
         this.scene.add(centerCircle);
 
+        const engineerLabelCanvas = document.createElement('canvas');
+        engineerLabelCanvas.width = 256;
+        engineerLabelCanvas.height = 128;
+        const engineerCtx = engineerLabelCanvas.getContext('2d');
+        engineerCtx.fillStyle = 'white';
+        engineerCtx.font = 'bold 32px Arial';
+        engineerCtx.textAlign = 'center';
+        engineerCtx.textBaseline = 'middle';
+        engineerCtx.fillText('Audio Engineer', 128, 64);
+
+        const engineerTexture = new THREE.CanvasTexture(engineerLabelCanvas);
+        const engineerMaterial = new THREE.MeshBasicMaterial({
+            map: engineerTexture,
+            transparent: true
+        });
+        const engineerLabel = new THREE.Mesh(
+            new THREE.PlaneGeometry(2.4, 0.6),
+            engineerMaterial
+        );
+        engineerLabel.rotation.x = -Math.PI / 2;
+        engineerLabel.position.set(0, -0.069, 0); // Above the white center ring
+        this.scene.add(engineerLabel);
+
         // Add red circle at z=-2
-        const redCircleGeometry = new THREE.RingGeometry(0.2, 0.25, 32);
+        const redCircleGeometry = new THREE.RingGeometry(0.5, 0.55, 32);
         const redCircleMaterial = new THREE.MeshBasicMaterial({
             color: 0xff0000,
             side: THREE.DoubleSide,
@@ -174,9 +197,31 @@ class AudioVisualizer3D {
         });
         const redCircle = new THREE.Mesh(redCircleGeometry, redCircleMaterial);
         redCircle.rotation.x = -Math.PI / 2;
-        redCircle.position.set(0, -0.06, -2); // Position at z=-2, slightly above the grid
+        redCircle.position.set(0, -0.06, -2.0); // Position at z=-2.0, slightly above the grid
         this.scene.add(redCircle);
 
+        const performerLabelCanvas = document.createElement('canvas');
+        performerLabelCanvas.width = 256;
+        performerLabelCanvas.height = 128;
+        const performerCtx = performerLabelCanvas.getContext('2d');
+        performerCtx.fillStyle = 'white';
+        performerCtx.font = 'bold 32px Arial';
+        performerCtx.textAlign = 'center';
+        performerCtx.textBaseline = 'middle';
+        performerCtx.fillText('Performer', 128, 64);
+
+        const performerTexture = new THREE.CanvasTexture(performerLabelCanvas);
+        const performerMaterial = new THREE.MeshBasicMaterial({
+            map: performerTexture,
+            transparent: true
+        });
+        const performerLabel = new THREE.Mesh(
+            new THREE.PlaneGeometry(2.4, 0.6),
+            performerMaterial
+        );
+        performerLabel.rotation.x = -Math.PI / 2;
+        performerLabel.position.set(0, -0.059, -2); // Above the red ring
+        this.scene.add(performerLabel);
         // Add text panels to the environment walls
         this.addTextPanels();
     }
@@ -303,13 +348,14 @@ class AudioVisualizer3D {
         const panelHeightDim = 3; // Use the larger height for all panels for consistency
         const titlePanelIndex = 3; // Index corresponding to the space between speakers 1 and 2 (180 degrees)
 
+
         const texts = [
-            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-            "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
-            "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.",
+            "",
+            "",
+            "",
             "TITLE_PLACEHOLDER", // Placeholder for the title panel
-            "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam.",
-            "Eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo."
+            "",
+            ""
         ];
 
         const titleText = "Spatial Visualization";
