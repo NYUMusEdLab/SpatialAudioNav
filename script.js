@@ -433,9 +433,9 @@ function setupResonator() {
     dryGain = audioCtx.createGain();
     wetGain = audioCtx.createGain();
     
-    // Initialize with dry signal only
-    dryGain.gain.value = 1.0;
-    wetGain.gain.value = 0.0;
+    // Initialize with both signals playing together (50/50 mix)
+    dryGain.gain.value = 0.5; // 50% dry at start
+    wetGain.gain.value = 0.5; // 50% wet at start
     
     console.log("Dry/wet mixer setup complete for Strophe V");
 }
@@ -694,9 +694,9 @@ resetButton.addEventListener('click', () => {
     stopPatternSwitching();
     stopSpecialEffects();
     
-    // Reset dry/wet control to dry
+    // Reset dry/wet control to initial state (50/50 mix for Strophe V)
     if (currentScene === 'stropheV') {
-        setDryWetAmount(0);
+        setDryWetAmount(0.5); // Start at 50% wet (both playing)
     }
     
     if (window.visualizer3D) {
@@ -1621,28 +1621,33 @@ function updateStropheVCrossfade() {
     if (currentScene !== 'stropheV' || !isStropheVPlaying || !currentAudioElement || !dryGain || !wetGain) return;
     
     const currentTime = currentAudioElement.currentTime;
-    const duration = currentAudioElement.duration || 10; // fallback duration
     
     let automaticWetAmount = 0;
     
-    // Calculate automatic crossfade curve based on the score
-    // This creates a curve that starts at 0%, peaks at 80-100% around 70% of the piece, then returns to 0%
-    const normalizedTime = currentTime / duration;
+    // Timestamps from strophe5.txt (converted to seconds)
+    const t1 = 4.000;   // Transition to 100% dry
+    const t2 = 33.483;  // Start transition to wet
+    const t3 = 43.600;  // Reach 100% wet
+    const t4 = 69.500;  // Return to 100% dry
     
-    if (normalizedTime < 0.2) {
-        // First 20%: Stay completely dry
-        automaticWetAmount = 0;
-    } else if (normalizedTime < 0.7) {
-        // 20% to 70%: Gradual increase to wet
-        const progress = (normalizedTime - 0.2) / 0.5; // 0 to 1
-        automaticWetAmount = Math.sin(progress * Math.PI * 0.5) * 1.0; // Smooth curve to 100%
-    } else if (normalizedTime < 0.9) {
-        // 70% to 90%: Stay at peak wetness
-        automaticWetAmount = 1.0;
+    if (currentTime < t1) {
+        // 0:00 to t1: Start with both playing together, transition to 100% dry
+        const progress = currentTime / t1; // 0 to 1
+        automaticWetAmount = 0.5 * (1.0 - progress); // Start at 50% wet, go to 0% wet
+    } else if (currentTime < t2) {
+        // t1 to t2: Stay at 100% dry
+        automaticWetAmount = 0.0;
+    } else if (currentTime < t3) {
+        // t2 to t3: Transition from 100% dry to 100% wet
+        const progress = (currentTime - t2) / (t3 - t2); // 0 to 1
+        automaticWetAmount = progress; // Go from 0% to 100% wet
+    } else if (currentTime < t4) {
+        // t3 to t4: Transition from 100% wet back to 100% dry
+        const progress = (currentTime - t3) / (t4 - t3); // 0 to 1
+        automaticWetAmount = 1.0 - progress; // Go from 100% wet to 0% wet
     } else {
-        // 90% to 100%: Return to dry
-        const progress = (normalizedTime - 0.9) / 0.1; // 0 to 1
-        automaticWetAmount = 1.0 - (progress * progress); // Smooth curve back to 0%
+        // After t4: Stay at 100% dry
+        automaticWetAmount = 0.0;
     }
     
     // In engineer mode, use manual control instead of automatic
@@ -1656,6 +1661,11 @@ function updateStropheVCrossfade() {
     
     dryGain.gain.setTargetAtTime(dryAmount, audioCtx.currentTime, 0.05);
     wetGain.gain.setTargetAtTime(finalWetAmount, audioCtx.currentTime, 0.05);
+    
+    // Continue the animation
+    if (isStropheVPlaying) {
+        requestAnimationFrame(updateStropheVCrossfade);
+    }
 }
 
 // Function to smoothly ramp between dry/wet values
