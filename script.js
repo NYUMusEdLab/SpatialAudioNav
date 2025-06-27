@@ -1127,9 +1127,9 @@ function setMode(mode) {
             if (window.visualizer3D && window.visualizer3D.setEngineerViewOptimizedForMinimized) {
                 window.visualizer3D.setEngineerViewOptimizedForMinimized(true);
             }
-            // Ensure 3D view is visible by default when switching to engineer mode
-            sceneContainer.classList.remove('minimized-view-hidden');
-            if(toggleMin3DViewBtn) toggleMin3DViewBtn.textContent = 'Hide 3D View';
+            // Set 3D view to hidden by default when switching to engineer mode
+            sceneContainer.classList.add('minimized-view-hidden');
+            if(toggleMin3DViewBtn) toggleMin3DViewBtn.textContent = 'Show 3D View';
 
         } else {
             console.log('Removing minimized/expanded classes');
