@@ -1257,6 +1257,9 @@ function setScene(scene) {
     currentPatternIndex = 0;
     updateArabicPlayhead();
     
+    // Update Arabic visualization image for the new scene
+    updateArabicVisualizationImage();
+    
     // If audio was initialized, need to recreate the audio context
     if (audioInitialized) {
         // Close existing audio context
@@ -1534,6 +1537,9 @@ document.addEventListener('DOMContentLoaded', () => {
     setMode('audience');
     setScene('default');
     
+    // Update Arabic visualization image for initial scene
+    updateArabicVisualizationImage();
+    
     // Add click listener for seeking on the Arabic visualization
     if (arabicContainer) {
         arabicContainer.addEventListener('click', handleSeek);
@@ -1661,11 +1667,12 @@ function updateStropheVCrossfade() {
     
     dryGain.gain.setTargetAtTime(dryAmount, audioCtx.currentTime, 0.05);
     wetGain.gain.setTargetAtTime(finalWetAmount, audioCtx.currentTime, 0.05);
-    
+
     // Continue the animation
     if (isStropheVPlaying) {
         requestAnimationFrame(updateStropheVCrossfade);
     }
+
 }
 
 // Function to smoothly ramp between dry/wet values
@@ -1781,4 +1788,27 @@ function toggleDryWetControlVisibility() {
     
     const shouldShow = currentScene === 'stropheV' && currentMode === 'engineer';
     dryWetControl.style.display = shouldShow ? 'block' : 'none';
+}
+
+// Function to update the Arabic visualization image based on current scene
+function updateArabicVisualizationImage() {
+    const arabicImage = document.getElementById('arabic-visualization-image');
+    if (!arabicImage) return;
+    
+    // Define image paths for different scenes
+    const sceneImages = {
+        'transition1-2': 'images/transition1-2viz.png',
+        'transition3-4': 'images/transition3-4viz.png',
+        'default': 'images/ArabicVisualization.png',
+        'stropheV': 'images/ArabicVisualization.png'
+    };
+    
+    // Get the appropriate image for the current scene
+    const imagePath = sceneImages[currentScene] || sceneImages['default'];
+    
+    // Update the image source
+    arabicImage.src = imagePath;
+    
+    // Update alt text to reflect the current scene
+    arabicImage.alt = `${currentScene} visualization`;
 }
