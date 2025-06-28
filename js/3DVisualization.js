@@ -164,7 +164,7 @@ class AudioVisualizer3D {
         centerCircle.position.y = -0.07; // Slightly above the grid
         this.scene.add(centerCircle);
 
-        // Add red circle at z=-2
+        // Add red circle at z=-4.111
         const redCircleGeometry = new THREE.RingGeometry(0.2, 0.25, 32);
         const redCircleMaterial = new THREE.MeshBasicMaterial({
             color: 0xff0000,
@@ -174,7 +174,7 @@ class AudioVisualizer3D {
         });
         const redCircle = new THREE.Mesh(redCircleGeometry, redCircleMaterial);
         redCircle.rotation.x = -Math.PI / 2;
-        redCircle.position.set(0, -0.06, -2); // Position at z=-2, slightly above the grid
+        redCircle.position.set(0, -0.06, -4.111); // Position at z=-4.111, slightly above the grid
         this.scene.add(redCircle);
 
         // Add text panels to the environment walls
@@ -1039,11 +1039,11 @@ class AudioVisualizer3D {
         ctx.arc(centerX, centerY, 0.5 * scale, 0, Math.PI * 2);
         ctx.stroke();
 
-        // Draw red circle at z=-2
+        // Draw red circle at z=-4.111
         ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(centerX, centerY - 2 * scale, 0.2 * scale, 0, Math.PI * 2);
+        ctx.arc(centerX, centerY -4.111 * scale, 0.2 * scale, 0, Math.PI * 2);
         ctx.stroke();
         
         // Define speaker positions with corrected gain node mappings
@@ -1404,7 +1404,7 @@ class AudioVisualizer3D {
     }
 
     moveToPerformerPerspective() {
-        this.listenerPosition.set(0, 1.7, -2); // Position at the red circle
+        this.listenerPosition.set(0, 1.7, -4.111); // Position at the red circle
         this.rotationAngle = Math.PI; // Face towards positive Z (center of speaker array)
         
         this.updateListenerRotation(); // Updates camera, 3D listener, and Web Audio listener
