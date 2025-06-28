@@ -1098,10 +1098,11 @@ function toggleVolumeDisplayVisibility(scene) {
 function setMode(mode) {
     if (!['engineer', 'audience'].includes(mode)) return;
     
+    const previousMode = currentMode; // Store the previous mode
     currentMode = mode;
     updateListenerPosition();
     
-    console.log(`Setting mode to: ${mode}`); // Debug log
+    console.log(`Setting mode to: ${mode}${previousMode ? ` (from ${previousMode})` : ''}`); // Debug log
     
     // Update UI
     document.querySelectorAll('.mode-btn').forEach(btn => {
@@ -1127,9 +1128,22 @@ function setMode(mode) {
             if (window.visualizer3D && window.visualizer3D.setEngineerViewOptimizedForMinimized) {
                 window.visualizer3D.setEngineerViewOptimizedForMinimized(true);
             }
-            // Set 3D view to hidden by default when switching to engineer mode
-            sceneContainer.classList.add('minimized-view-hidden');
-            if(toggleMin3DViewBtn) toggleMin3DViewBtn.textContent = 'Show 3D View';
+            
+            // Quick toggle effect only when switching from audience to engineer
+            // if (previousMode === 'audience') {
+            //     // First ensure it's visible for the quick flash
+            //     sceneContainer.classList.remove('minimized-view-hidden');
+                
+            //     // After a brief moment, hide it again
+            //     setTimeout(() => {
+            //         sceneContainer.classList.add('minimized-view-hidden');
+            //         if(toggleMin3DViewBtn) toggleMin3DViewBtn.textContent = 'Show 3D View';
+            //     }, 300); // 300ms delay for the quick flash effect
+            // } else {
+                // If not switching from audience, just hide immediately
+                sceneContainer.classList.add('minimized-view-hidden');
+                if(toggleMin3DViewBtn) toggleMin3DViewBtn.textContent = 'Show 3D View';
+            // }
 
         } else {
             console.log('Removing minimized/expanded classes');
@@ -1812,3 +1826,12 @@ function updateArabicVisualizationImage() {
     // Update alt text to reflect the current scene
     arabicImage.alt = `${currentScene} visualization`;
 }
+
+// Add a resize listener to force view updates
+window.addEventListener('resize', () => {
+    // Use a timeout to avoid excessive calls during resize spam
+    setTimeout(() => {
+        console.log('Dispatching resize event on window resize');
+        window.dispatchEvent(new Event('resize'));
+    }, 100);
+});

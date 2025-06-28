@@ -71,7 +71,7 @@ body, html {
     color: #ddd;
     cursor: pointer;
     font-size: 12px;
-    transition: all 0.2s;
+    /* transition: all 0.2s; */
 }
 
 .mode-btn.active {
@@ -880,7 +880,9 @@ input:checked + .slider:before {
 
 /* Class to hide the minimized scene container */
 .minimized-view-hidden {
-    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 
 /* Engineer mode: Make 3D view smaller */
@@ -901,20 +903,17 @@ input:checked + .slider:before {
     border-radius: 5px;
     z-index: 150; /* Higher z-index to appear above other elements */
     overflow: hidden; /* Add this line to clip the content */
+    transition: opacity 0.2s ease, visibility 0.2s ease; /* Smooth transitions for visibility changes */
 }
 
 /* Engineer mode: Make 2D topdown view expanded */
 .topdown-view.expanded {
-    width: calc(100% - 60px); /* Adjust for padding */
-    height: calc(100% - 100px); /* Adjust for top and bottom */
+    width: calc(100% - 40px); /* Adjust for padding */
+    height: calc(100% - 40px); /* Adjust for padding */
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-}
-
-/* Make sure transitions are smooth */
-#scene-container, .topdown-view {
-    transition: width 0.3s ease, height 0.3s ease, top 0.3s ease, right 0.3s ease;
+    right: auto; /* Override default right positioning */
 }
 
 /* Dry/Wet Control for Strophe V */
