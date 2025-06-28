@@ -1814,7 +1814,7 @@ function updateArabicVisualizationImage() {
         'transition1-2': 'images/transition1-2viz.png',
         'transition3-4': 'images/transition3-4viz.png',
         'default': 'images/ArabicVisualization.png',
-        'stropheV': 'images/ArabicVisualization.png'
+        'stropheV': 'images/strophe5viz.png'
     };
     
     // Get the appropriate image for the current scene
