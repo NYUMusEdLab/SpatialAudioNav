@@ -254,20 +254,20 @@ input:checked + .slider:before {
 /* Replace the current #toggleArabicBtn style with this */
 #toggleArabicBtn {
     position: absolute;
-    top: 70px;
-    right: 160px; /* Move right to avoid overlap with #triviaButton */
-    width: 120px;
+    top: 50px;
+    right: 252px; /* Move right to avoid overlap with #triviaButton */
+    width: 180px;
     height: 40px;
     background-color: rgba(51, 51, 51, 0.7);
     color: white;
     border: 1px solid #e69138;
-    border-radius: 4px;
+    border-radius: 8px;
     cursor: pointer;
     z-index: 9999; /* Increased to ensure always on top */
     font-size: 14px;
     transition: background-color 0.3s ease;
     padding: 8px 12px;
-    box-shadow: 0 0 10px rgba(230, 145, 56, 0.3);
+    box-shadow: 0 0 10px rgba(230, 145, 56, 0.2);
 }
 
 #toggleArabicBtn:hover {
@@ -545,16 +545,17 @@ input:checked + .slider:before {
     transform: translateX(-50%); /* Adjust for centering */
     width: 90%; /* Adjust width as needed, or use max-width */
     max-width: 1200px; /* Example max-width, adjust as needed */
-    height: 200px; /* Adjusted height from 100px to 200px */
-    background-color: rgba(0, 0, 0, 0.8); /* Optional background */
+    height: 150px; /* Adjusted height from 100px to 200px */
+    background-color: rgba(0, 0, 0, 0.3); /* Optional background */
     border: 2px solid #e69138; /* Orange outline */
-    border-radius: 10px; /* Corner radius */
+    border-radius: 20px; /* Corner radius */
     overflow: hidden; /* Hide overflow and constrain playhead visually */
     z-index: 105; /* Ensure it's above other bottom elements if necessary */
 }
 
 #arabic-visualization-image {
-    display: block;
+    /* display: block; */
+    display:flex;
     width: 100%;
     height: 100%;
     object-fit: fill; /* Changed from 'contain' to 'fill' to stretch vertically */
