@@ -747,7 +747,6 @@ function setInitialSpeakerGains() {
         }
     } else {
         //MANUAL ADJUSTMENT
-        // const initialGains = [0.5, 0.3, 0.7, 0.4, 0.6, 0.2];
         const initialGains = [0.5, 0,0,0,0,0];
         playSpeaker(initialGains);
     }
@@ -991,7 +990,7 @@ function applyPattern(index) {
     const pattern = patterns[index];
     
     // Special handling for transition1-2
-    if (currentScene === "transition1-2") {
+    if (currentScene === "transition1-2" && currentMode !== 'engineer') {
         // Initialize state if needed
         if (!t12SpeakerStates || t12SpeakerStates.length !== 6) {
             resetT12SpeakerStates();
@@ -1206,6 +1205,9 @@ function setMode(mode) {
     
     // Reset engineer speaker keys when changing mode
     if (mode !== 'engineer') {
+        resetEngineerSpeakerKeys();
+    } else {
+        // When entering engineer mode, initialize all speakers to 50% volume
         resetEngineerSpeakerKeys();
     }
     
@@ -1612,8 +1614,11 @@ function handleEngineerSpeakerKeys(e, isDown) {
     if (engineerKeyToSpeakerIndex.hasOwnProperty(key)) {
         const idx = engineerKeyToSpeakerIndex[key];
         engineerSpeakerKeys[idx] = isDown;
-        // Build pattern: 1 for pressed, 0 for not pressed
-        const pattern = engineerSpeakerKeys.map(active => active ? 1 : 0);
+        // Build pattern: 1.0 for pressed (100%), 0.5 for not pressed (50% minimum)
+
+        const baseVolume = currentScene === 'transition1-2' ? 0.5 : 0.0;
+        
+        const pattern = engineerSpeakerKeys.map(active => active ? 1.0 : baseVolume);
         playSpeaker(pattern);
         // Prevent default to avoid unwanted browser shortcuts
         e.preventDefault();
@@ -1627,6 +1632,12 @@ window.addEventListener('keyup', (e) => handleEngineerSpeakerKeys(e, false));
 // When leaving engineer mode, reset speaker keys and pattern
 function resetEngineerSpeakerKeys() {
     engineerSpeakerKeys = [false, false, false, false, false, false];
+    // In engineer mode, set all speakers to 50% minimum volume
+    if (currentMode === 'engineer') {
+        const baseVolume = currentScene === 'transition1-2' ? 0.5 : 0.0;
+        const pattern = [baseVolume, baseVolume, baseVolume, baseVolume, baseVolume, baseVolume];
+        playSpeaker(pattern);
+    }
 }
 
 // Function to start the automatic crossfading for Strophe V
