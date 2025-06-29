@@ -1423,8 +1423,98 @@ class AudioVisualizer3D {
             // The cone's appearance (emissive color/intensity for audio visualization)
             // is handled by updateSpeakers and should not be overridden here.
         });
-    }
+   }
 
+    // Add method to update hidden speaker visualization
+    updateHiddenSpeakerVisualization(position) {
+        // Create hidden speaker if it doesn't exist
+        if (!this.hiddenSpeaker && this.scene) {
+            const geometry = new THREE.SphereGeometry(0.3, 16, 16);
+            const material = new THREE.MeshPhongMaterial({
+                color: 0x0099FF,
+                transparent: true,
+                opacity: 0.7
+            });
+            this.hiddenSpeaker = new THREE.Mesh(geometry, material);
+            this.hiddenSpeaker.position.set(position.x, position.y, position.z);
+            this.scene.add(this.hiddenSpeaker);
+            
+            // Add a text label for clarity
+            const textMaterial = new THREE.LineBasicMaterial({
+                color: 0xFFFFFF
+            });
+            const textGeometry = new THREE.TextGeometry('Hidden Speaker', {
+                font: this.font,
+                size: 0.15,
+                height: 0.01
+            });
+            const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+            textMesh.position.set(position.x, position.y + 0.4, position.z);
+            this.scene.add(textMesh);
+            this.hiddenSpeakerLabel = textMesh;
+        }
+        
+        // Update position and visibility
+        if (this.hiddenSpeaker) {
+            this.hiddenSpeaker.position.set(position.x, position.y, position.z);
+            this.hiddenSpeaker.visible = true;
+            
+            // Update label if it exists
+            if (this.hiddenSpeakerLabel) {
+                this.hiddenSpeakerLabel.position.set(position.x, position.y + 0.4, position.z);
+                this.hiddenSpeakerLabel.visible = true;
+            }
+        }
+    }
+    
+    // Update wet/dry visualization for engineer mode
+    updateWetDryVisualization(dryAmount, wetAmount) {
+        // Create performer indicator if it doesn't exist
+        if (!this.performerIndicator && this.scene) {
+            const geometry = new THREE.CylinderGeometry(0.5, 0.5, 0.1, 32);
+            const material = new THREE.MeshPhongMaterial({
+                color: 0xFF0000,
+                transparent: true,
+                opacity: 0.8
+            });
+            this.performerIndicator = new THREE.Mesh(geometry, material);
+            this.performerIndicator.position.set(0, 0.05, 0); // At center, just above the ground
+            this.scene.add(this.performerIndicator);
+            
+            // Add a text label for clarity
+            const textMaterial = new THREE.LineBasicMaterial({
+                color: 0xFFFFFF
+            });
+            const textGeometry = new THREE.TextGeometry('Performer (100% Dry)', {
+                font: this.font,
+                size: 0.15,
+                height: 0.01
+            });
+            const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+            textMesh.position.set(0, 0.2, 0);
+            this.scene.add(textMesh);
+            this.performerLabel = textMesh;
+        }
+        
+        // Update hidden speaker visibility based on wet amount
+        if (this.hiddenSpeaker) {
+            // Scale the size of the hidden speaker based on wet amount
+            const scale = 0.3 + (wetAmount * 0.7); // 0.3 to 1.0 size
+            this.hiddenSpeaker.scale.set(scale, scale, scale);
+            
+            // Also adjust opacity based on wet amount for visual feedback
+            const material = this.hiddenSpeaker.material;
+            if (material) {
+                material.opacity = 0.3 + (wetAmount * 0.7); // 0.3 to 1.0 opacity
+                material.needsUpdate = true;
+            }
+            
+            // Update the label if wetAmount is significant
+            if (this.hiddenSpeakerLabel) {
+                this.hiddenSpeakerLabel.visible = wetAmount > 0.05;
+            }
+        }
+    }
 }
 
 // Initialize the 3D visualizer when the DOM is fully loaded
@@ -1459,10 +1549,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 500);
 });
 
-// Add a method to the global scope that can be called from the existing audio code
+// Add methods to the global scope that can be called from the existing audio code
 window.updateVisualization3D = function(gainNodes) {
     if (window.visualizer3D) {
         window.visualizer3D.updateSpeakers(gainNodes);
+    }
+};
+
+// Add method to update the hidden speaker visualization
+window.updateHiddenSpeakerVisualization = function(position) {
+    if (window.visualizer3D && window.visualizer3D.updateHiddenSpeakerVisualization) {
+        window.visualizer3D.updateHiddenSpeakerVisualization(position);
+    }
+};
+
+// Add method to update the wet/dry visualization
+window.updateWetDryVisualization = function(dryAmount, wetAmount) {
+    if (window.visualizer3D && window.visualizer3D.updateWetDryVisualization) {
+        window.visualizer3D.updateWetDryVisualization(dryAmount, wetAmount);
     }
 };
 

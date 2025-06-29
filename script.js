@@ -35,6 +35,9 @@ let wetPanners = []; // Separate panners for wet signal
 let wetGainNodes = []; // Separate gain nodes for wet signal
 let manualWetAmount = 0; // 0-1, controlled by engineer
 let isStropheVPlaying = false;
+let hiddenSpeakerPosition = null; // Position of the hidden speaker for wet signal
+let performerDryPanner = null; // Panner for the performer (dry signal)
+let hiddenWetPanner = null; // Panner for the hidden speaker (wet signal)
 
 // Track which audio elements have already been connected to sources
 let connectedAudioElements = new Set();
@@ -433,11 +436,18 @@ function setupResonator() {
     dryGain = audioCtx.createGain();
     wetGain = audioCtx.createGain();
     
-    // Initialize with both signals playing together (50/50 mix)
-    dryGain.gain.value = 0.5; // 50% dry at start
+    // Initialize with performer fully audible and wet signal at 50%
+    dryGain.gain.value = 1.0; // 100% dry (performer) at all times
     wetGain.gain.value = 0.5; // 50% wet at start
     
-    console.log("Dry/wet mixer setup complete for Strophe V");
+    // Create a position for the hidden speaker between speakers 1 and 2, slightly elevated
+    hiddenSpeakerPosition = {
+        x: (speakerPositions[0].x + speakerPositions[1].x) / 2,
+        y: 0.5, // Slightly elevated above the ground
+        z: (speakerPositions[0].z + speakerPositions[1].z) / 2
+    };
+    
+    console.log("Dry/wet mixer setup complete for Strophe V with performer and hidden speaker positioning");
 }
 
 // Connect audio nodes based on the current scene
@@ -461,25 +471,49 @@ function connectAudioNodes() {
     }
     
     if (currentScene === "stropheV") {
-        // Strophe V uses dual audio sources with dry/wet mixing
-        if (stropheWetAudioSource && wetPanners.length && wetGainNodes.length) {
-            // Connect dry source (main audio element) through speakers to dry gain
-            panners.forEach((panner, index) => {
-                audioSource.connect(panner);
-                panner.connect(gainNodes[index]);
-                gainNodes[index].connect(dryGain);
-            });
+        // Strophe V uses the performer as the dry source and a hidden speaker for the wet signal
+        if (stropheWetAudioSource) {
+            // Set up performer position panner for dry signal (always at 100%)
+            const performerPanner = audioCtx.createPanner();
+            performerPanner.panningModel = 'HRTF';
+            performerPanner.distanceModel = 'inverse';
+            performerPanner.refDistance = 1;
+            performerPanner.maxDistance = 10000;
+            performerPanner.rolloffFactor = 1;
+            
+            // Position the performer at the center (red circle)
+            performerPanner.positionX.value = 0;
+            performerPanner.positionY.value = 0;
+            performerPanner.positionZ.value = 0;
+            
+            // Connect dry source (performer) directly to master at full volume
+            audioSource.connect(performerPanner);
+            performerPanner.connect(dryGain);
             dryGain.connect(masterGain);
             
-            // Connect wet source through separate wet panners to wet gain
-            wetPanners.forEach((panner, index) => {
-                stropheWetAudioSource.connect(panner);
-                panner.connect(wetGainNodes[index]);
-                // Copy the gain values from the dry signal
-                wetGainNodes[index].gain.value = gainNodes[index].gain.value;
-                wetGainNodes[index].connect(wetGain);
-            });
+            // Set up hidden speaker panner for wet signal only
+            const hiddenSpeakerPanner = audioCtx.createPanner();
+            hiddenSpeakerPanner.panningModel = 'HRTF';
+            hiddenSpeakerPanner.distanceModel = 'inverse';
+            hiddenSpeakerPanner.refDistance = 1;
+            hiddenSpeakerPanner.maxDistance = 10000;
+            hiddenSpeakerPanner.rolloffFactor = 1;
+            
+            // Position the hidden speaker between speakers 1 and 2, slightly elevated
+            hiddenSpeakerPanner.positionX.value = hiddenSpeakerPosition.x;
+            hiddenSpeakerPanner.positionY.value = hiddenSpeakerPosition.y;
+            hiddenSpeakerPanner.positionZ.value = hiddenSpeakerPosition.z;
+            
+            // Connect wet source through hidden speaker panner to wet gain
+            stropheWetAudioSource.connect(hiddenSpeakerPanner);
+            hiddenSpeakerPanner.connect(wetGain);
             wetGain.connect(masterGain);
+            
+            // Store these panners for potential future adjustments
+            performerDryPanner = performerPanner;
+            hiddenWetPanner = hiddenSpeakerPanner;
+            
+            console.log("Strophe V setup: Performer (dry) and hidden speaker (wet) configuration active");
         } else {
             // Fallback to single source if wet source isn't available
             panners.forEach((panner, index) => {
@@ -503,16 +537,28 @@ function connectAudioNodes() {
 // Abstracted function to play a pattern on speakers
 function playSpeaker(pattern) {
     if (!gainNodes.length) return;
+    
+    // For Strophe V, we don't adjust the visible speaker gains
+    // as audio comes from performer and hidden speaker only
+    if (currentScene === 'stropheV') {
+        // We still need to update the visualization for visual feedback
+        if (window.updateVisualization3D) {
+            window.updateVisualization3D(gainNodes);
+            // For visualization purposes, we might want to indicate the hidden speaker position
+            if (window.updateHiddenSpeakerVisualization && hiddenSpeakerPosition) {
+                window.updateHiddenSpeakerVisualization(hiddenSpeakerPosition);
+            }
+        }
+        return;
+    }
+    
+    // For all other scenes, adjust visible speaker gains
     pattern.forEach((gain, idx) => {
         if (gainNodes[idx]) {
             gainNodes[idx].gain.setTargetAtTime(gain, audioCtx ? audioCtx.currentTime : 0, 0.1);
-            
-            // For Strophe V, also update the wet gain nodes
-            if (currentScene === 'stropheV' && wetGainNodes[idx]) {
-                wetGainNodes[idx].gain.setTargetAtTime(gain, audioCtx ? audioCtx.currentTime : 0, 0.1);
-            }
         }
     });
+    
     // Update 3D visualization if available
     if (window.updateVisualization3D) {
         window.updateVisualization3D(gainNodes);
@@ -1659,26 +1705,26 @@ function updateStropheVCrossfade() {
     // Timestamps from strophe5.txt (converted to seconds)
     const t1 = 4.000;   // Transition to 100% dry
     const t2 = 33.483;  // Start transition to wet
-    const t3 = 43.600;  // Reach 100% wet
+    const t3 = 43.600;  // Reach 100% wet (max wet signal)
     const t4 = 69.500;  // Return to 100% dry
     
     if (currentTime < t1) {
-        // 0:00 to t1: Start with both playing together, transition to 100% dry
+        // 0:00 to t1: Start with some wet, transition to no wet
         const progress = currentTime / t1; // 0 to 1
         automaticWetAmount = 0.5 * (1.0 - progress); // Start at 50% wet, go to 0% wet
     } else if (currentTime < t2) {
-        // t1 to t2: Stay at 100% dry
+        // t1 to t2: No wet signal
         automaticWetAmount = 0.0;
     } else if (currentTime < t3) {
-        // t2 to t3: Transition from 100% dry to 100% wet
+        // t2 to t3: Transition from no wet to full wet
         const progress = (currentTime - t2) / (t3 - t2); // 0 to 1
         automaticWetAmount = progress; // Go from 0% to 100% wet
     } else if (currentTime < t4) {
-        // t3 to t4: Transition from 100% wet back to 100% dry
+        // t3 to t4: Transition from full wet back to no wet
         const progress = (currentTime - t3) / (t4 - t3); // 0 to 1
         automaticWetAmount = 1.0 - progress; // Go from 100% wet to 0% wet
     } else {
-        // After t4: Stay at 100% dry
+        // After t4: No wet signal
         automaticWetAmount = 0.0;
     }
     
@@ -1688,17 +1734,25 @@ function updateStropheVCrossfade() {
         finalWetAmount = manualWetAmount;
     }
     
-    // Apply the crossfade
-    const dryAmount = 1.0 - finalWetAmount;
+    // For Strophe V revised implementation:
+    // 1. Dry signal (performer) always at 100%
+    // 2. Wet signal (hidden speaker) varies according to the wet amount
     
-    dryGain.gain.setTargetAtTime(dryAmount, audioCtx.currentTime, 0.05);
+    // Performer is always at full volume
+    dryGain.gain.setTargetAtTime(1.0, audioCtx.currentTime, 0.05);
+    
+    // Hidden speaker's volume varies based on wet amount
     wetGain.gain.setTargetAtTime(finalWetAmount, audioCtx.currentTime, 0.05);
+    
+    // Update visualization if needed
+    if (window.updateWetDryVisualization) {
+        window.updateWetDryVisualization(1.0, finalWetAmount);
+    }
 
     // Continue the animation
     if (isStropheVPlaying) {
         requestAnimationFrame(updateStropheVCrossfade);
     }
-
 }
 
 // Function to smoothly ramp between dry/wet values
@@ -1792,9 +1846,14 @@ function setDryWetAmount(amount) {
     
     // If in engineer mode and Strophe V is playing, immediately apply the change
     if (currentMode === 'engineer' && currentScene === 'stropheV' && isStropheVPlaying && dryGain && wetGain) {
-        const dryAmount = 1.0 - manualWetAmount;
-        dryGain.gain.setTargetAtTime(dryAmount, audioCtx.currentTime, 0.05);
+        // For revised implementation: performer always at 100%, only wet signal varies
+        dryGain.gain.setTargetAtTime(1.0, audioCtx.currentTime, 0.05);
         wetGain.gain.setTargetAtTime(manualWetAmount, audioCtx.currentTime, 0.05);
+        
+        // Update visualization if available
+        if (window.updateWetDryVisualization) {
+            window.updateWetDryVisualization(1.0, manualWetAmount);
+        }
     }
 }
 
