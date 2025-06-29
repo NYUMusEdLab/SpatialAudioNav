@@ -2011,7 +2011,7 @@ function updateScoreForCurrentScene() {
     
     // Define score image paths for different scenes
     const sceneScores = {
-        'default': 'images/score/boulezscorescrollsigleinitial.png',
+        'default': 'images/score/boulezscoreportraitsigleinitial.png',
         'transition1-2': 'images/score/transition12.png',
         'transition3-4': 'images/score/boulezdialoguescoretransition3-4.png',
         'stropheV': 'images/score/strophe5.png'
