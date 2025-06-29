@@ -762,8 +762,9 @@ input:checked + .slider:before {
 /* Score Display Toggle Button */
 #scoreDisplayBtn {
     position: absolute;
-    top: 140px;
-    right: 252px;
+    top: 390px;
+    left: 20px;
+    /* right: 252px; */
     padding: 8px 12px;
     background: rgba(0, 0, 0, 0.7);
     color: #e69138;
