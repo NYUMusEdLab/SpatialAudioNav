@@ -1018,9 +1018,10 @@ function applyPattern(index) {
                 gainNodes[i].gain.setTargetAtTime(0.5, audioCtx.currentTime, 0.05);
                 t12SpeakerStates[i].state = "idle";
             } else if (isActive && prevState === "active") {
-                // Still active, keep at 1.0
+                // Speaker specified again while already active: toggle down to 0.5
                 gainNodes[i].gain.cancelScheduledValues(audioCtx.currentTime);
-                gainNodes[i].gain.setTargetAtTime(1.0, audioCtx.currentTime, 0.05);
+                gainNodes[i].gain.setTargetAtTime(0.5, audioCtx.currentTime, 0.3);
+                t12SpeakerStates[i].state = "decaying";
             } else if (isActive && prevState === "decaying") {
                 // Reactivation from decaying state: ramp back up to 1.0
                 gainNodes[i].gain.cancelScheduledValues(audioCtx.currentTime);
