@@ -111,6 +111,9 @@
         <!-- Add Volume Display Toggle Button -->
         <button id="volumeDisplayBtn" title="Toggle Volume Display" style="display: none;">Volume Visualization</button>
         
+        <!-- Score Display Toggle Button -->
+        <button id="scoreDisplayBtn" title="Toggle Musical Score" style="display: none;">Musical Score</button>
+        
         <!-- Dry/Wet Control for Strophe V -->
         <div id="dryWetControl" style="display: none;">
             <div class="control-label">Piano Resonance</div>
@@ -220,6 +223,19 @@
                         </div>
                         <div class="volume-percentage">50%</div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Score Panel for Audio Engineer -->
+        <div id="score-panel" style="display: none;">
+            <div class="score-panel-header">
+                <h3>Musical Score</h3>
+                <button id="closeScorePanel" class="close-panel">&times;</button>
+            </div>
+            <div class="score-content">
+                <div class="score-image-container">
+                    <img id="score-image" src="" alt="Musical Score" />
                 </div>
             </div>
         </div>

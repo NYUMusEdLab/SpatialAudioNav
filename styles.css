@@ -759,6 +759,31 @@ input:checked + .slider:before {
     color: #000;
 }
 
+/* Score Display Toggle Button */
+#scoreDisplayBtn {
+    position: absolute;
+    top: 140px;
+    right: 252px;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.7);
+    color: #e69138;
+    border: 1px solid #e69138;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    z-index: 110;
+    transition: all 0.2s ease;
+}
+
+#scoreDisplayBtn:hover {
+    background: rgba(230, 145, 56, 0.2);
+}
+
+#scoreDisplayBtn.active {
+    background: #e69138;
+    color: #000;
+}
+
 /* Mobile optimization for volume panel */
 @media (max-width: 768px) {
     #volume-display-panel {
@@ -842,15 +867,10 @@ input:checked + .slider:before {
     position: absolute;
     top: 150px;
     left: 200px;
-    /* right: 300px; */
+    /* Adjusted to avoid overlap with score panel (400px + 20px margin + 20px gap = 440px from right) */
+    right: 460px; 
     width: 200px;
     height: 200px;
-    /* width: 40%;
-    height: 40%;
-    right: 0;
-    top: 0;
-    left: auto;
-    bottom: auto; */
     border: 2px solid #e69138;
     border-radius: 5px;
     z-index: 150; /* Higher z-index to appear above other elements */
@@ -977,5 +997,108 @@ input:checked + .slider:before {
     
     .control-value {
         font-size: 11px;
+    }
+}
+
+/* Score Panel Styles for Audio Engineer */
+#score-panel {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 400px;
+    height: calc(100vh - 40px);
+    background: rgba(0, 0, 0, 0.9);
+    color: #fff;
+    border: 2px solid #e69138;
+    border-radius: 12px;
+    padding: 15px;
+    z-index: 110;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
+    transform: translateX(100%);
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    /* display: none; is handled by JS */
+}
+
+#score-panel.visible {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.score-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 8px;
+}
+
+.score-panel-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #e69138;
+    font-weight: bold;
+}
+
+.score-content {
+    height: calc(100% - 50px);
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.score-image-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100%;
+}
+
+#score-image {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+    transition: transform 0.3s ease;
+}
+
+#score-image:hover {
+    transform: scale(1.02);
+}
+
+/* Custom scrollbar for score panel */
+.score-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.score-content::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+.score-content::-webkit-scrollbar-thumb {
+    background: #e69138;
+    border-radius: 4px;
+    transition: background 0.3s ease;
+}
+
+.score-content::-webkit-scrollbar-thumb:hover {
+    background: #ffb84d;
+}
+
+/* Mobile optimization for score panel */
+@media (max-width: 768px) {
+    #score-panel {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        width: auto;
+        height: 50vh;
+        max-height: 400px;
+    }
+    
+    .score-panel-header h3 {
+        font-size: 16px;
     }
 }

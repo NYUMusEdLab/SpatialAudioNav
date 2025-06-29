@@ -171,11 +171,17 @@ const arabicContainer = document.getElementById('arabic-visualization-container'
 const volumeDisplayPanel = document.getElementById('volume-display-panel');
 const volumeDisplayBtn = document.getElementById('volumeDisplayBtn');
 const closeVolumePanel = document.getElementById('closeVolumePanel');
+const scorePanel = document.getElementById('score-panel');
+const scoreImage = document.getElementById('score-image');
+const scoreDisplayBtn = document.getElementById('scoreDisplayBtn');
 
 if (!playPauseButton) console.error("Play/Pause button not found!");
 if (!resetButton) console.error("Reset button not found!");
 if (!arabicPlayhead) console.error("Arabic playhead element not found!");
 if (!arabicContainer) console.error("Arabic visualization container not found!");
+if (!scorePanel) console.error("Score panel not found!");
+if (!scoreImage) console.error("Score image not found!");
+if (!scoreDisplayBtn) console.error("Score display button not found!");
 
 // Use a simple flag to track initialization attempts
 let initializationAttempted = false;
@@ -928,6 +934,9 @@ function startPatternSwitching() {
         if (currentScene === 'stropheV' && dryGain && wetGain) {
             updateDryWetBalance(currentTime);
         }
+
+        // Update score scroll position if in engineer mode
+        updateScoreScrollPosition();
         
         if (window.updateVisualization3D) {
             window.updateVisualization3D(gainNodes);
@@ -1249,6 +1258,9 @@ function setMode(mode) {
     // Toggle dry/wet control visibility
     toggleDryWetControlVisibility();
     
+    // Update score panel visibility based on mode
+    updateScorePanelVisibility();
+    
     // Reset engineer speaker keys when changing mode
     if (mode !== 'engineer') {
         resetEngineerSpeakerKeys();
@@ -1287,6 +1299,11 @@ function setScene(scene) {
     
     // Update scene 
     currentScene = scene;
+    
+    // Update score panel for the new scene if in engineer mode
+    if (currentMode === 'engineer') {
+        updateScoreForCurrentScene();
+    }
     
     // Reset transition1-2 states when switching to it
     if (scene === "transition1-2") {
@@ -1559,6 +1576,32 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Set up score display controls
+    if (scoreDisplayBtn) {
+        scoreDisplayBtn.addEventListener('click', () => {
+            if (scorePanel) {
+                const isVisible = scorePanel.style.display === 'block' && scorePanel.classList.contains('visible');
+                
+                if (isVisible) {
+                    // Hide the score panel
+                    scorePanel.classList.remove('visible');
+                    setTimeout(() => {
+                        scorePanel.style.display = 'none';
+                    }, 300);
+                    scoreDisplayBtn.classList.remove('active');
+                } else {
+                    // Show the score panel
+                    scorePanel.style.display = 'block';
+                    setTimeout(() => {
+                        scorePanel.classList.add('visible');
+                    }, 10);
+                    scoreDisplayBtn.classList.add('active');
+                    updateScoreForCurrentScene();
+                }
+            }
+        });
+    }
     
     if (closeVolumePanel) {
         closeVolumePanel.addEventListener('click', () => {
@@ -1567,6 +1610,27 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (volumeDisplayBtn) {
                 volumeDisplayBtn.classList.remove('active');
+            }
+        });
+    }
+
+    // Score panel close button
+    const closeScorePanel = document.getElementById('closeScorePanel');
+    if (closeScorePanel) {
+        closeScorePanel.addEventListener('click', () => {
+            const scorePanel = document.getElementById('score-panel');
+            const scoreDisplayBtn = document.getElementById('scoreDisplayBtn');
+            
+            if (scorePanel) {
+                scorePanel.classList.remove('visible');
+                // Hide the panel after animation completes
+                setTimeout(() => {
+                    scorePanel.style.display = 'none';
+                }, 300);
+            }
+            
+            if (scoreDisplayBtn) {
+                scoreDisplayBtn.classList.remove('active');
             }
         });
     }
@@ -1864,6 +1928,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Set initial dry/wet value
     setDryWetAmount(0);
+    
+    // Initialize score panel visibility
+    updateScorePanelVisibility();
 });
 
 // Function to show/hide the dry/wet control based on scene and mode
@@ -1896,6 +1963,103 @@ function updateArabicVisualizationImage() {
     
     // Update alt text to reflect the current scene
     arabicImage.alt = `${currentScene} visualization`;
+}
+
+/**
+ * Score Panel Management for Audio Engineer Mode
+ */
+
+// Function to show/hide score panel based on mode
+function updateScorePanelVisibility() {
+    const scorePanel = document.getElementById('score-panel');
+    const scoreDisplayBtn = document.getElementById('scoreDisplayBtn');
+    
+    if (!scorePanel) return;
+    
+    if (currentMode === 'engineer') {
+        // Show the toggle button
+        if (scoreDisplayBtn) {
+            scoreDisplayBtn.style.display = 'block';
+            scoreDisplayBtn.classList.add('active');
+        }
+        
+        scorePanel.style.display = 'block';
+        // Add a small delay to ensure the element is visible before animating
+        setTimeout(() => {
+            scorePanel.classList.add('visible');
+        }, 10);
+        updateScoreForCurrentScene();
+    } else {
+        // Hide the toggle button
+        if (scoreDisplayBtn) {
+            scoreDisplayBtn.style.display = 'none';
+            scoreDisplayBtn.classList.remove('active');
+        }
+        
+        scorePanel.classList.remove('visible');
+        // Hide the panel after animation completes
+        setTimeout(() => {
+            scorePanel.style.display = 'none';
+        }, 300);
+    }
+}
+
+// Function to update the score image based on current scene
+function updateScoreForCurrentScene() {
+    const scoreImage = document.getElementById('score-image');
+    if (!scoreImage) return;
+    
+    // Define score image paths for different scenes
+    const sceneScores = {
+        'default': 'images/score/boulezscorescrollsigleinitial.png',
+        'transition1-2': 'images/score/transition12.png',
+        'transition3-4': 'images/score/boulezdialoguescoretransition3-4.png',
+        'stropheV': 'images/score/strophe5.png'
+    };
+    
+    // Get the appropriate score for the current scene
+    const scorePath = sceneScores[currentScene] || sceneScores['default'];
+    
+    // Update the score image source
+    scoreImage.src = scorePath;
+    scoreImage.alt = `Musical score for ${currentScene}`;
+    
+    // Scroll to top when score changes
+    const scoreContent = document.querySelector('.score-content');
+    if (scoreContent) {
+        scoreContent.scrollTop = 0;
+    }
+}
+
+// Function to auto-scroll score based on audio progress (optional enhancement)
+function updateScoreScrollPosition() {
+    if (currentMode !== 'engineer' || !currentAudioElement) return;
+    
+    const scoreContent = document.querySelector('.score-content');
+    const scoreImage = document.getElementById('score-image');
+    
+    if (!scoreContent || !scoreImage) return;
+    
+    // Only auto-scroll if audio is playing
+    if (currentAudioElement.paused) return;
+    
+    const currentTime = currentAudioElement.currentTime;
+    const duration = currentAudioElement.duration;
+    
+    if (duration && duration > 0) {
+        // Calculate progress as a percentage
+        const progress = currentTime / duration;
+        
+        // Calculate the scroll position (scroll through the score based on time)
+        const maxScroll = scoreContent.scrollHeight - scoreContent.clientHeight;
+        const targetScroll = progress * maxScroll;
+        
+        // Smooth scroll to the target position
+        scoreContent.scrollTo({
+            top: targetScroll,
+            behavior: 'smooth'
+        });
+    }
 }
 
 // Add a resize listener to force view updates
