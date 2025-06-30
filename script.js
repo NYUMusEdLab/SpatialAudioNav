@@ -446,11 +446,15 @@ function setupResonator() {
     dryGain.gain.value = 1.0; // 100% dry (performer) at all times
     wetGain.gain.value = 0.5; // 50% wet at start
     
-    // Create a position for the hidden speaker between speakers 1 and 2, slightly elevated
+    // Create a position for the hidden speaker BEHIND speakers 1 and 2, slightly elevated
+    // Speakers 1 and 2 are at: 
+    // Speaker 1: { x: -6.1, y: 1.7, z: -3.5 }
+    // Speaker 2: { x: 6.1, y: 1.7, z: -3.5 }
+    // Hidden speaker should be further back (more negative z) and between them
     hiddenSpeakerPosition = {
-        x: (speakerPositions[0].x + speakerPositions[1].x) / 2,
-        y: 0.5, // Slightly elevated above the ground
-        z: (speakerPositions[0].z + speakerPositions[1].z) / 2
+        x: (speakerPositions[0].x + speakerPositions[1].x) / 2, // Between speakers 1 and 2 (x=0)
+        y: 5, // Slightly elevated above speaker level
+        z: -11 // Behind speakers 1 and 2 (they're at z=-3.5, so go further back)
     };
     
     console.log("Dry/wet mixer setup complete for Strophe V with performer and hidden speaker positioning");
@@ -487,10 +491,10 @@ function connectAudioNodes() {
             performerPanner.maxDistance = 10000;
             performerPanner.rolloffFactor = 1;
             
-            // Position the performer at the center (red circle)
+            // Position the performer at the red circle location
             performerPanner.positionX.value = 0;
-            performerPanner.positionY.value = 0;
-            performerPanner.positionZ.value = 0;
+            performerPanner.positionY.value = -0.06; // Slightly below ground level like the red circle
+            performerPanner.positionZ.value = -4.111; // Red circle position
             
             // Connect dry source (performer) directly to master at full volume
             audioSource.connect(performerPanner);
@@ -1339,6 +1343,17 @@ function setScene(scene) {
     
     // Update Arabic visualization image for the new scene
     updateArabicVisualizationImage();
+    
+    // For Strophe V, show the hidden speaker visualization
+    if (scene === 'stropheV' && hiddenSpeakerPosition) {
+        if (window.updateHiddenSpeakerVisualization) {
+            window.updateHiddenSpeakerVisualization(hiddenSpeakerPosition);
+        }
+        // Also show initial wet/dry visualization
+        if (window.updateWetDryVisualization) {
+            window.updateWetDryVisualization(1.0, 0.5); // Performer at 100%, wet at 50%
+        }
+    }
     
     // If audio was initialized, need to recreate the audio context
     if (audioInitialized) {

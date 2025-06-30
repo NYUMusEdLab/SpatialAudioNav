@@ -1439,19 +1439,26 @@ class AudioVisualizer3D {
             this.hiddenSpeaker.position.set(position.x, position.y, position.z);
             this.scene.add(this.hiddenSpeaker);
             
-            // Add a text label for clarity
-            const textMaterial = new THREE.LineBasicMaterial({
-                color: 0xFFFFFF
-            });
-            const textGeometry = new THREE.TextGeometry('Hidden Speaker', {
-                font: this.font,
-                size: 0.15,
-                height: 0.01
-            });
-            const textMesh = new THREE.Mesh(textGeometry, textMaterial);
-            textMesh.position.set(position.x, position.y + 0.4, position.z);
-            this.scene.add(textMesh);
-            this.hiddenSpeakerLabel = textMesh;
+            // Add a simple text label using Canvas texture (more reliable than TextGeometry)
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 256;
+            canvas.height = 64;
+            
+            context.fillStyle = 'transparent';
+            context.fillRect(0, 0, 256, 64);
+            context.fillStyle = 'white';
+            context.font = '24px Arial';
+            context.textAlign = 'center';
+            context.fillText('Hidden Speaker', 128, 40);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+            const sprite = new THREE.Sprite(spriteMaterial);
+            sprite.position.set(position.x, position.y + 0.8, position.z);
+            sprite.scale.set(2, 0.5, 1);
+            this.scene.add(sprite);
+            this.hiddenSpeakerLabel = sprite;
         }
         
         // Update position and visibility
@@ -1461,7 +1468,7 @@ class AudioVisualizer3D {
             
             // Update label if it exists
             if (this.hiddenSpeakerLabel) {
-                this.hiddenSpeakerLabel.position.set(position.x, position.y + 0.4, position.z);
+                this.hiddenSpeakerLabel.position.set(position.x, position.y + 0.8, position.z);
                 this.hiddenSpeakerLabel.visible = true;
             }
         }
@@ -1478,22 +1485,30 @@ class AudioVisualizer3D {
                 opacity: 0.8
             });
             this.performerIndicator = new THREE.Mesh(geometry, material);
-            this.performerIndicator.position.set(0, 0.05, 0); // At center, just above the ground
+            // Position at the red circle location (performer position)
+            this.performerIndicator.position.set(0, 0, -4.111); // Red circle coordinates
             this.scene.add(this.performerIndicator);
             
-            // Add a text label for clarity
-            const textMaterial = new THREE.LineBasicMaterial({
-                color: 0xFFFFFF
-            });
-            const textGeometry = new THREE.TextGeometry('Performer (100% Dry)', {
-                font: this.font,
-                size: 0.15,
-                height: 0.01
-            });
-            const textMesh = new THREE.Mesh(textGeometry, textMaterial);
-            textMesh.position.set(0, 0.2, 0);
-            this.scene.add(textMesh);
-            this.performerLabel = textMesh;
+            // Add a text label using Canvas texture for better reliability
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 256;
+            canvas.height = 64;
+            
+            context.fillStyle = 'transparent';
+            context.fillRect(0, 0, 256, 64);
+            context.fillStyle = 'white';
+            context.font = '20px Arial';
+            context.textAlign = 'center';
+            context.fillText('Performer (100% Dry)', 128, 40);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+            const sprite = new THREE.Sprite(spriteMaterial);
+            sprite.position.set(0, 0.5, -4.111); // Above the performer position
+            sprite.scale.set(3, 0.75, 1);
+            this.scene.add(sprite);
+            this.performerLabel = sprite;
         }
         
         // Update hidden speaker visibility based on wet amount
