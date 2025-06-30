@@ -1,3 +1,8 @@
+# TRANSITION 3-4 MOVEMENT TIMING REFERENCE FILE
+# These timing values were used during development but are NOT actively used by the application  
+# The actual timings used by the application are HARDCODED in script.js timestampPatterns["transition3-4"].timestamps
+# This movement uses CIRCULAR PANNING - these times mark sections but rotation is continuous
+# Format: MM:SS:SS.mmm (minutes:seconds:milliseconds)
 00:00:00.000
 00:00:14.700
 00:00:50.00

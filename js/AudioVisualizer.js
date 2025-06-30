@@ -22,13 +22,16 @@ class AudioVisualizer {
         this.phraseMarkersElement = document.querySelector('.phrase-markers');
         this.playhead = document.querySelector('.playhead');
         
-        // Sample phrase data (would be replaced with actual music analysis)
+        // MUSICAL PHRASE TIMING DEFINITIONS (HARDCODED)
+        // Sample phrase data for waveform visualization - these are separate from
+        // the main speaker pattern timings defined in script.js timestampPatterns
+        // These timing values are for visual phrase analysis only
         this.phrases = [
-            { start: 0, end: 4.2, type: 'opening' },
-            { start: 4.2, end: 8.5, type: 'development' },
-            { start: 8.5, end: 12.3, type: 'transition' },
-            { start: 12.3, end: 16.7, type: 'closing' },
-            // Add more phrases based on the actual music
+            { start: 0, end: 4.2, type: 'opening' },        // 0-4.2 seconds
+            { start: 4.2, end: 8.5, type: 'development' },  // 4.2-8.5 seconds  
+            { start: 8.5, end: 12.3, type: 'transition' },  // 8.5-12.3 seconds
+            { start: 12.3, end: 16.7, type: 'closing' },    // 12.3-16.7 seconds
+            // Add more phrases based on the actual music analysis
         ];
         
         // Initialize

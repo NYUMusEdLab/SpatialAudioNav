@@ -839,10 +839,14 @@ class AudioVisualizer3D {
         }
     }
 
+    // UPDATE SPEAKER VISUALIZATION BASED ON TIMING-DRIVEN GAIN VALUES
+    // This function is called from script.js when audio patterns change
+    // The gain values come from the timestampPatterns defined in script.js
     updateSpeakers(gainNodes) {
         if (!gainNodes || !gainNodes.length) return;
         
         // Update each speaker's visualization based on its gain
+        // Each gain value reflects the current timing state from the movement patterns
         for (let i = 0; i < Math.min(this.speakers.length, gainNodes.length); i++) {
             const gain = gainNodes[i].gain.value;
             if (!this.speakers[i]) continue;
@@ -868,6 +872,7 @@ class AudioVisualizer3D {
             });
             
             // Create sound waves with varying frequency based on gain
+            // Wave creation frequency is tied to the speaker's current gain level
             const threshold = 0.1; // Minimum gain to create waves
             const baseChance = 0.15; // Increased chance for better visibility
             const chanceIncrease = 0.5; // How much the chance increases with gain

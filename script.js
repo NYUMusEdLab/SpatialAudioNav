@@ -1,5 +1,44 @@
 /**
  * Enhanced Spatial Audio Implementation
+ * 
+ * ==== TIMING DOCUMENTATION SUMMARY ====
+ * 
+ * This application uses HARDCODED timing values for 4 different musical movements.
+ * All timing values are defined in the timestampPatterns object (lines ~70-160).
+ * 
+ * TIMING SOURCES:
+ * 1. PRIMARY: timestampPatterns object in this file (script.js) - ACTIVELY USED
+ * 2. REFERENCE: /timings/*.txt files - for development reference only, NOT used by app
+ * 
+ * MOVEMENT TIMING BREAKDOWN:
+ * 
+ * 1. DEFAULT (Double Clarinet):
+ *    - 27 timing points from 0 to 68.79 seconds
+ *    - Simple pattern switching between 6 speakers
+ *    - Timings: timestampPatterns.default.timestamps (line ~76)
+ * 
+ * 2. TRANSITION 1-2:  
+ *    - 25 timing points from 0 to 56.929 seconds
+ *    - Special decay behavior - speakers fade to 0.5 instead of 0
+ *    - Timings: timestampPatterns["transition1-2"].timestamps (line ~90)
+ * 
+ * 3. TRANSITION 3-4:
+ *    - 5 timing points from 0 to 55.5 seconds
+ *    - Uses CIRCULAR PANNING with acceleration over time
+ *    - Rotation speed controlled in animateCircularPanning() (line ~1020)
+ *    - Timings: timestampPatterns["transition3-4"].timestamps (line ~140)
+ * 
+ * 4. STROPHE V:
+ *    - 10 timing points from 0 to 9 seconds (simplified for demo)
+ *    - Uses DRY/WET mixing between performer and hidden speaker
+ *    - Automatic crossfading controlled in updateDryWetBalance() (line ~1080)
+ *    - Timings: timestampPatterns.stropheV.timestamps (line ~150)
+ * 
+ * TIMING CONTROL FUNCTIONS:
+ * - startPatternSwitching(): Main timing loop (50ms intervals)
+ * - animateCircularPanning(): Controls rotation speed for transition3-4  
+ * - updateDryWetBalance(): Controls crossfading for StropheV
+ * - setInitialSpeakerGains(): Sets starting conditions for each movement
  */
 
 // Create variables to hold audio components (initialized on user interaction)
@@ -64,15 +103,24 @@ document.addEventListener('DOMContentLoaded', () => {
     stropheWetAudioElement = document.getElementById('stropheV-wet');
 });
 
-// Audio timestamps and patterns
+// Audio timestamps and patterns - MAIN TIMING DEFINITIONS FOR ALL MOVEMENTS
 const timestampPatterns = {
     default: {
+        // DOUBLE CLARINET MOVEMENT TIMINGS (default scene)
+        // These timestamps are HARDCODED in seconds for the double clarinet piece
+        // Each timestamp corresponds to when the audio pattern should change
+        // Total duration: ~68.79 seconds with 27 different timing points
         timestamps: [
             0, 1.483, 3.311, 4.59, 7.863, 11.365, 17.314, 18.926, 23.75, 
             31.035, 33.334, 36.547, 37.723, 40.114, 41.014, 42.203, 43.957, 
             45.172, 45.783, 47.39, 48.731, 50.323, 52.462, 55.005, 59.489, 
             63.377, 68.79
         ],
+        // DOUBLE CLARINET MOVEMENT SPEAKER PATTERNS
+        // Each pattern array corresponds to the 6 speakers in hexagonal arrangement
+        // [speaker1, speaker2, speaker3, speaker4, speaker5, speaker6]
+        // 1 = active, 0 = inactive for each timestamp above
+        // 27 patterns total matching the 27 timestamps
         patterns: [
             [1, 0, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 1, 0],
             [0, 1, 0, 0, 0, 0], [0, 0, 0, 0, 1, 0], [0, 0, 0, 1, 0, 0],
@@ -86,12 +134,21 @@ const timestampPatterns = {
         ]
     },
     "transition1-2": {
+        // TRANSITION 1-2 MOVEMENT TIMINGS
+        // These timestamps are HARDCODED in seconds for the transition1-2 piece  
+        // Corresponds to audio file: audio/transition12.mp3
+        // Total duration: ~56.929 seconds with 25 different timing points
+        // This movement has special gain behavior - speakers decay to 0.5 instead of 0
         timestamps: [
             0.000, 8.238, 8.657, 10.897, 11.442, 12.834, 13.283, 16.761, 
             17.966, 18.536, 19.240, 21.339, 22.231, 26.715, 27.833, 
             29.779, 30.296, 38.051, 38.437, 40.586, 41.628, 47.053, 
             47.710, 56.151, 56.929
         ],
+        // TRANSITION 1-2 SPEAKER PATTERNS
+        // Each pattern corresponds to timing above - 25 patterns total
+        // Comments show which speaker number is active (1-6)
+        // This movement uses special gain decay logic in applyPattern()
         patterns: [
             [1, 1, 1, 1, 1, 1], // all
             [0, 0, 0, 0, 0, 1], // 6
@@ -121,15 +178,31 @@ const timestampPatterns = {
         ]
     },
     "transition3-4": {
+        // TRANSITION 3-4 MOVEMENT TIMINGS  
+        // These timestamps are HARDCODED for the transition3-4 piece
+        // Corresponds to audio file: audio/transition34.mp3
+        // Only 5 timing points - this movement uses CIRCULAR PANNING effect
+        // The circular rotation speed accelerates over time (see animateCircularPanning())
         timestamps: [0, 14.700, 50.00, 53.000, 55.500],
         // Special rotating pattern handled by circular panner
+        // These patterns are overridden by the circular panning algorithm
+        // The actual audio moves in a circle around all 6 speakers
         patterns: [
             [1, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0],
             [0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 1],
         ]
     },
     "stropheV": {
+        // STROPHE V MOVEMENT TIMINGS
+        // These timestamps are HARDCODED for the Strophe V piece
+        // Corresponds to audio files: audio/strophe5dry.mp3 and audio/strophe5wet.mp3
+        // Simple 1-second intervals for demonstration - 10 timing points total
+        // This movement uses DRY/WET MIXING with performer + hidden speaker
         timestamps: [0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0],
+        // STROPHE V SPEAKER PATTERNS
+        // Note: These patterns are largely decorative as the actual audio comes from:
+        // - Performer position (dry signal at 100%)
+        // - Hidden speaker behind speakers 1&2 (wet signal, controllable 0-100%)
         patterns: [
             [1, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0],
             [0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 1],
@@ -423,18 +496,20 @@ function getHexPosition(index, radius) {
 }
 
 // Setup circular panner for transition 3-4
+// TIMING SETUP: Define base parameters for circular panning movement
 function setupCircularPanner() {
     if (!audioCtx) return;
     
     // Create a gain node to control the circular panning effect
     circularPanner = {
-        angle: 0,
-        speed: 0.5, // Base rotation speed
-        active: false
+        angle: 0,           // Starting angle (0 radians)
+        speed: 0.5,         // BASE ROTATION SPEED (multiplied by acceleration in animateCircularPanning)
+        active: false       // Whether circular panning is currently active
     };
 }
 
 // Setup dry/wet mixing for Strophe V
+// INITIAL TIMING SETUP: Define starting balance between performer and hidden speaker
 function setupResonator() {
     if (!audioCtx) return;
     
@@ -442,11 +517,12 @@ function setupResonator() {
     dryGain = audioCtx.createGain();
     wetGain = audioCtx.createGain();
     
+    // STROPHE V INITIAL TIMING VALUES:
     // Initialize with performer fully audible and wet signal at 50%
-    dryGain.gain.value = 1.0; // 100% dry (performer) at all times
-    wetGain.gain.value = 0.5; // 50% wet at start
+    dryGain.gain.value = 1.0; // 100% dry (performer) - always audible
+    wetGain.gain.value = 0.5; // 50% wet at start - will increase over time via updateDryWetBalance()
     
-    // Create a position for the hidden speaker BEHIND speakers 1 and 2, slightly elevated
+    // SPATIAL POSITIONING: Create a position for the hidden speaker BEHIND speakers 1 and 2, slightly elevated
     // Speakers 1 and 2 are at: 
     // Speaker 1: { x: -6.1, y: 1.7, z: -3.5 }
     // Speaker 2: { x: 6.1, y: 1.7, z: -3.5 }
@@ -786,12 +862,13 @@ function resetT12SpeakerStates() {
 }
 
 // Set initial gain values
-// MANUAL ADJUSTMENT
+// INITIAL TIMING SETUP: Different movements start with different speaker configurations
 function setInitialSpeakerGains() {
     if (!gainNodes.length) return;
     
     if (currentScene === "transition1-2") {
-        // All speakers start at 0.5 for transition1-2
+        // TRANSITION 1-2 INITIAL TIMING: All speakers start at 50% volume (0.5)
+        // This is different from other movements - creates the baseline for decay behavior
         const initialGains = [0.5, 0.5, 0.5, 0.5, 0.5, 0.5];
         gainNodes.forEach((gain, idx) => {
             gain.gain.setValueAtTime(initialGains[idx], audioCtx.currentTime);
@@ -802,7 +879,8 @@ function setInitialSpeakerGains() {
             window.updateVisualization3D(gainNodes);
         }
     } else {
-        //MANUAL ADJUSTMENT
+        // DEFAULT/OTHER MOVEMENTS INITIAL TIMING: Only speaker 1 starts active at 50%
+        // [speaker1, speaker2, speaker3, speaker4, speaker5, speaker6]
         const initialGains = [0.5, 0,0,0,0,0];
         playSpeaker(initialGains);
     }
@@ -980,17 +1058,21 @@ function stopSpecialEffects() {
 }
 
 // Animate circular panning for Transition 3-4
+// TIMING CONTROL: Circular panning speed accelerates based on audio position
 function animateCircularPanning() {
     if (!circularPanner.active) return;
     
     const currentTime = currentAudioElement ? currentAudioElement.currentTime : 0;
     const audioDuration = currentAudioElement ? currentAudioElement.duration || 10 : 10;
     
-    // Calculate acceleration factor based on time
-    // Start slow, gradually accelerate to maximum speed
+    // TIMING ACCELERATION ALGORITHM FOR TRANSITION 3-4
+    // Calculate acceleration factor based on time progression through the audio
+    // Start slow, gradually accelerate to maximum speed (5x faster by the end)
+    // This creates the effect where circular motion gets faster as the piece progresses
     accelerationFactor = 1.0 + (currentTime / audioDuration) * 5.0;
     
-    // Update the angle
+    // Update the angle - ROTATION SPEED CONTROLLED HERE
+    // Base speed (0.5) * acceleration factor * frame rate multiplier (0.05)
     circularPanner.angle += (circularPanner.speed * accelerationFactor) * 0.05;
     
     // Normalize the angle
@@ -1028,16 +1110,21 @@ function animateCircularPanning() {
 }
 
 // Update dry/wet balance for Strophe V
+// TIMING CONTROL: Automatic crossfading based on audio position
 function updateDryWetBalance(currentTime) {
     if (!dryGain || !wetGain) return;
     
-    // Calculate wet/dry balance based on time
-    // Start dry, gradually increase wet signal
+    // STROPHE V AUTOMATIC TIMING ALGORITHM  
+    // Calculate wet/dry balance based on time progression through audio
+    // Start dry (performer only), gradually increase wet signal (hidden speaker)
     const audioDuration = currentAudioElement ? currentAudioElement.duration || 10 : 10;
+    // TIMING: Reach full wet signal at 70% through the audio duration
     const wetAmount = Math.min(1.0, currentTime / (audioDuration * 0.7)); // Reach full wet at 70% of duration
     
-    // Apply crossfade
+    // CROSSFADE TIMING: Apply the calculated balance with smooth transitions
+    // Dry signal: starts at 100%, reduces to 20% (always keep some performer audible)
     dryGain.gain.setTargetAtTime(1.0 - (wetAmount * 0.8), audioCtx.currentTime, 0.1); // Keep some dry signal
+    // Wet signal: starts at 0%, increases to 100% by 70% of audio duration  
     wetGain.gain.setTargetAtTime(wetAmount, audioCtx.currentTime, 0.1);
 }
 

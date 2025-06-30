@@ -1,3 +1,8 @@
+# TRANSITION 1-2 MOVEMENT TIMING REFERENCE FILE  
+# These timing values were used during development but are NOT actively used by the application
+# The actual timings used by the application are HARDCODED in script.js timestampPatterns["transition1-2"].timestamps
+# Format: MM:SS:SS.mmm (minutes:seconds:milliseconds) followed by speaker number or "all"
+# Numbers 1-6 refer to speakers, "all" means all speakers active
 00:00:00.000 all
 00:00:08.238 6
 00:00:08.657 6
