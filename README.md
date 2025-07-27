@@ -1,6 +1,6 @@
 # 3D Visualization for the cool Spatial Audio thing
 
-(Updated June 8, 2025)
+(Updated July 27, 2025); Finally finished merging/replacing with pseudo-final version.
 
 This is a 3D visualization in the works that is meant to go along with the main interface for the spatial audio playground (the Boulez project)!
 
