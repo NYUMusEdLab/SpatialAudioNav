@@ -1,8 +1,6 @@
-# 3D Visualization for the cool Spatial Audio thing
-
-(Updated July 27, 2025); Finally finished merging/replacing with pseudo-final version.
-
 This is a 3D visualization in the works that is meant to go along with the main interface for the spatial audio playground (the Boulez project)!
+
+To move around the visualization, use WASD controls and J+L keys to rotate left or right.
 
 ### Command to run this
 
@@ -13,9 +11,12 @@ This is a 3D visualization in the works that is meant to go along with the main 
 > - Add text to each of the 5 remaining slides in the audience view
 > - *Add a new composition that can demonstrate the spatial environment...? (interesting idea for a composition)*
 
-## Command to run this
 
-`python3 -m http.server 8000`
+# some important updates
+
+(Update Dec 23, 2025); Fixed a major joystick usability issue; it's now much smoother.
+
+(Update July 27, 2025); Finally finished merging/replacing with pseudo-final version.
 
 ## Below are screenshots from various different points during the coding process
 
@@ -146,7 +147,7 @@ This project creates an immersive 3D visualization system for spatial audio, all
 
 ## User Interaction
 
-- Rotate the listener using joystick or drag controls
+- Rotate the listener using keyboard shortcuts (WASD + J and L for rotation)
 - Play/pause audio with controls
 - Reset position and audio with reset button
 - View active speakers in both 3D and 2D perspectives

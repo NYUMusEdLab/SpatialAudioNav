@@ -901,7 +901,7 @@ class AudioVisualizer3D {
         this.renderer.setSize(width, height, true); // Set to CSS size with updateStyle=true
         
         // Recreate joystick to ensure proper positioning
-        this.setupJoystick();
+        // this.setupJoystick();
         
         // Reset drag state if window resizes during drag
         this.isDragging = false;
