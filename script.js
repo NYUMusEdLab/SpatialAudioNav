@@ -1542,7 +1542,26 @@ function showSceneTrivia(scene) {
 // Initialize on DOM load
 document.addEventListener('DOMContentLoaded', () => {
     console.log("DOM loaded, initializing UI...");
-    
+
+    const titleContainer = document.getElementById('title-container');
+    const titleDismissBtn = document.getElementById('title-dismiss');
+
+    const hideTitleCard = () => {
+        if (!titleContainer) return;
+        if (!titleContainer.classList.contains('minimized')) {
+            titleContainer.classList.add('minimized');
+        }
+        titleContainer.setAttribute('aria-hidden', 'true');
+    };
+
+    if (titleContainer) {
+        titleContainer.setAttribute('aria-hidden', 'false');
+    }
+
+    if (titleContainer && titleDismissBtn) {
+        titleDismissBtn.addEventListener('click', hideTitleCard);
+    }
+
     // Set initial button states
     if (playPauseButton) {
         playPauseButton.dataset.playing = 'false';
@@ -1633,19 +1652,43 @@ document.addEventListener('DOMContentLoaded', () => {
     const triviaButton = document.getElementById('triviaButton');
     const triviaContainer = document.querySelector('.trivia-container');
     const closeTrivia = document.querySelector('.close-trivia');
-    
+
     if (triviaButton && triviaContainer) {
         triviaButton.addEventListener('click', () => {
             triviaContainer.style.display = 'flex';
         });
     }
-    
+
     if (closeTrivia && triviaContainer) {
         closeTrivia.addEventListener('click', () => {
             triviaContainer.style.display = 'none';
         });
     }
-    
+
+    if (triviaContainer) {
+        triviaContainer.setAttribute('role', 'dialog');
+        triviaContainer.setAttribute('aria-modal', 'true');
+    }
+
+    const handleGlobalEscape = (event) => {
+        if (event.key !== 'Escape') return;
+
+        if (triviaContainer && triviaContainer.style.display === 'flex') {
+            triviaContainer.style.display = 'none';
+            return;
+        }
+
+        if (document.body.classList.contains('composer-active')) {
+            return;
+        }
+
+        if (titleContainer && !titleContainer.classList.contains('minimized')) {
+            hideTitleCard();
+        }
+    };
+
+    document.addEventListener('keydown', handleGlobalEscape);
+
     // Set up trivia navigation
     document.querySelectorAll('.trivia-nav').forEach(btn => {
         btn.addEventListener('click', () => {
