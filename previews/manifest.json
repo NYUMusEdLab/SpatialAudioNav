@@ -16,6 +16,10 @@
     "04-brief-accents": {
       "source_commit": "d9cdcc2ad968797c0b3477ac6687b7e3ad2c9ef7",
       "tree": "26b5401c391507525f6be121bef171d17e3a294b"
+    },
+    "05-room-navigation": {
+      "source_commit": "73e065f78f03e3672f1077b2eb1426b406c21956",
+      "tree": "340a69e5250e33f1cbf632648b955644f0bf68d5"
     }
   },
   "generated_date": "2026-10-06"
