@@ -20,6 +20,10 @@
     "05-room-navigation": {
       "source_commit": "73e065f78f03e3672f1077b2eb1426b406c21956",
       "tree": "340a69e5250e33f1cbf632648b955644f0bf68d5"
+    },
+    "06-volume-circles": {
+      "source_commit": "4ce9252c6cc554fea51577ded21103f4136e48d4",
+      "tree": "831ccc3a417272e94df32e1a6bf938f8ad585528"
     }
   },
   "generated_date": "2026-10-06"
