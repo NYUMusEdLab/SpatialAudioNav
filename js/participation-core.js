@@ -54,9 +54,17 @@
     function accentStrength(signal, background) {
         return Math.min(1, Math.sqrt(Math.max(0, signal - background - 0.0005) * 12));
     }
+    // Keep the entire speaker ring and its labels inside either screen orientation.
+    function overviewBounds(aspect) {
+        const ratio = Number.isFinite(aspect) && aspect > 0 ? aspect : 1;
+        return { halfWidth: 9.5 * Math.max(1, ratio), halfHeight: 9.5 * Math.max(1, 1 / ratio) };
+    }
+    function eyeFov(aspect) {
+        return Math.max(75, Math.min(110, 2 * Math.atan(1 / Math.max(0.1, aspect)) * 180 / Math.PI));
+    }
     class Session {
         constructor() {
-            this.mode = 'listen'; this.position = 'audience'; this.free = false;
+            this.mode = 'listen'; this.position = 'audience'; this.free = false; this.customPosition = false;
             this.holds = new Map(); this.latched = new Set(); this.inputStyle = 'hold';
             this.pose = { ...positions.audience };
         }
@@ -68,7 +76,7 @@
         }
         setPosition(position) {
             if (!positions[position]) return;
-            this.position = position; this.pose = { ...positions[position] };
+            this.position = position; this.pose = { ...positions[position] }; this.customPosition = false;
         }
         setInputStyle(style) {
             if (!['hold', 'latch'].includes(style)) return;
@@ -87,8 +95,14 @@
         gains(time) {
             return this.mode === 'mix' ? speakers.map(s => this.selected().has(s.id) ? 1 : 0.5) : referenceGains(time);
         }
+        moveTo(x, z) {
+            if (this.mode !== 'explore' || !this.free || !Number.isFinite(x) || !Number.isFinite(z)) return;
+            const scale = Math.min(1, 5.5 / (Math.hypot(x, z) || 1));
+            this.pose.x = x * scale; this.pose.z = z * scale; this.customPosition = true;
+        }
         move(forward, sideways, turn, dt) {
             if (this.mode !== 'explore' || !this.free) return;
+            if (forward || sideways || turn) this.customPosition = true;
             this.pose.yaw += turn * dt * 1.4;
             const angle = this.pose.yaw;
             this.pose.x += (-Math.sin(angle) * forward + Math.cos(angle) * sideways) * dt * 2;
@@ -116,5 +130,5 @@
             }
         }
     }
-    return { cues, accents, attack, release, speakers, positions, cueAt, referenceGains, referenceLevels, accentStrength, Session, Playback };
+    return { cues, accents, attack, release, speakers, positions, cueAt, referenceGains, referenceLevels, accentStrength, overviewBounds, eyeFov, Session, Playback };
 });

@@ -133,3 +133,26 @@ test('audio scheduling retains release events and cancels them on manual takeove
     calls.forEach(events => assert.equal(events.filter(c=>c[0]==='target').length,0));
     assert.equal(calls[5][1][1],C.referenceLevels(8.9)[5]);
 });
+
+
+test('whole-room framing contains the speaker ring in portrait and landscape', () => {
+    for (const aspect of [320/440,390/481,844/170,1280/600]) {
+        const bounds = C.overviewBounds(aspect);
+        assert.ok(bounds.halfWidth >= 9.5 && bounds.halfHeight >= 9.5);
+        assert.ok(Math.abs(bounds.halfWidth / bounds.halfHeight - aspect) < 1e-9);
+        assert.ok(C.eyeFov(aspect) >= 75 && C.eyeFov(aspect) <= 110);
+    }
+});
+
+test('tap-to-move clamps position, preserves heading and mix, and marks a custom position', () => {
+    const s = new C.Session(); const initial = {...s.pose};
+    s.moveTo(2,3); assert.deepEqual(s.pose,initial);
+    s.setMode('explore');s.free=true;s.pose.yaw=1.3;
+    const gains = s.gains(17);
+    s.moveTo(3,-2);assert.equal(s.pose.x,3);assert.equal(s.pose.z,-2);assert.equal(s.pose.yaw,1.3);
+    assert.equal(s.customPosition,true);assert.deepEqual(s.gains(17),gains);
+    s.moveTo(20,20);assert.ok(Math.hypot(s.pose.x,s.pose.z)<=5.500001);
+    s.moveTo(NaN,0);assert.ok(Number.isFinite(s.pose.x));
+    s.free=false;const pose={...s.pose};s.moveTo(0,0);assert.deepEqual(s.pose,pose);
+    s.setPosition('audience');assert.equal(s.customPosition,false);assert.equal(s.pose.z,2);
+});

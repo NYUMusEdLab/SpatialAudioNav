@@ -1,4 +1,4 @@
-/* Preview 04: a single-excerpt study with one shared media clock. */
+/* Preview 05: a single-excerpt study with one shared media clock. */
 (() => {
     'use strict';
     const C = window.ParticipationCore;
@@ -11,6 +11,7 @@
     const speakerKeys = { '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, u: 1, i: 2, k: 3, m: 4, n: 5, h: 6 };
     let context, master, sourceMeter, sourceSamples, channels = [], setupPromise, raf = 0, lastFrame = 0;
     let view = 'timeline', guide = true, room, drag = null, lastCue = -1;
+    let roomView = 'whole', orbitYaw = 0;
     let plannedGains = [], listeningPose = '', automationMode = '';
     let backgroundRms = 0;
     const accentLights = Array(6).fill(0);
@@ -95,10 +96,10 @@
         document.body.dataset.experience = session.mode;
         document.body.classList.toggle('free-roam', session.free);
         document.querySelectorAll('[data-experience]').forEach(button => { if (button.tagName === 'BUTTON') button.setAttribute('aria-pressed', String(button.dataset.experience === session.mode)); });
-        document.querySelectorAll('[data-position]').forEach(button => button.setAttribute('aria-pressed', String(!session.free && button.dataset.position === session.position)));
+        document.querySelectorAll('[data-position]').forEach(button => button.setAttribute('aria-pressed', String(!session.free && !session.customPosition && button.dataset.position === session.position)));
         $('position-controls').hidden = session.mode !== 'explore';
         $('music-workspace').hidden = !mixing; $('listening-prompt').hidden = mixing;
-        $('walk-panel').hidden = !session.free; $('free-move').setAttribute('aria-pressed', String(session.free));
+        $('walk-panel').hidden = !session.free; renderRoomControls(); $('free-move').setAttribute('aria-pressed', String(session.free));
         $('mix-owner').textContent = mixing ? 'Your mix' : 'Example mix';
         $('prompt-kicker').textContent = session.mode === 'explore' ? 'Change your perspective' : 'Listen for';
         $('prompt-title').textContent = session.mode === 'explore' ? 'The same music, another place' : 'A gesture comes forward';
@@ -198,7 +199,7 @@
         const p = session.pose, [lx, ly] = pos(p);
         draw.fillStyle = '#edf0f2'; draw.beginPath(); draw.arc(lx, ly, 5, 0, Math.PI * 2); draw.fill();
         draw.strokeStyle = '#edf0f2'; draw.lineWidth = 2; draw.beginPath(); draw.moveTo(lx, ly); draw.lineTo(lx - Math.sin(p.yaw) * 18, ly - Math.cos(p.yaw) * 18); draw.stroke();
-        draw.font = '11px system-ui'; draw.fillText(session.free ? 'You' : C.positions[session.position].label, lx, ly + (session.position === 'clarinetist' ? 30 : 23));
+        draw.font = '11px system-ui'; draw.fillText(session.free || session.customPosition ? 'You' : C.positions[session.position].label, lx, ly + (session.position === 'clarinetist' ? 30 : 23));
     }
     function createRoom() {
         if (room) return true;
@@ -206,31 +207,71 @@
         try {
             const T = window.THREE, scene = new T.Scene(); scene.background = new T.Color(0x101820);
             const camera = new T.PerspectiveCamera(75, 1, 0.1, 100);
+            const overview = new T.OrthographicCamera(-10, 10, 10, -10, 0.1, 100);
             const renderer = new T.WebGLRenderer({ antialias: true, powerPreference: 'low-power' }); renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
             $('room-view').append(renderer.domElement); scene.add(new T.HemisphereLight(0xe5edf4, 0x323844, 1.6));
             const floor = new T.Mesh(new T.CircleGeometry(10, 64), new T.MeshStandardMaterial({ color: 0x202a32, roughness: 1 })); floor.rotation.x = -Math.PI / 2; scene.add(floor);
             scene.add(new T.GridHelper(20, 20, 0x465865, 0x2d3b45));
-            function label(text, x, y, z) {
-                const surface = document.createElement('canvas'); surface.width = 512; surface.height = 128;
-                const brush = surface.getContext('2d'); brush.fillStyle = '#edf0f2'; brush.font = '42px sans-serif'; brush.textAlign = 'center'; brush.fillText(text, 256, 76);
-                const sprite = new T.Sprite(new T.SpriteMaterial({ map: new T.CanvasTexture(surface), depthTest: false })); sprite.position.set(x, y, z); sprite.scale.set(2.6, 0.65, 1); scene.add(sprite);
-            }
-            const meshes = C.speakers.map(s => { const mesh = new T.Mesh(new T.BoxGeometry(0.55, 1.5, 0.45), new T.MeshStandardMaterial({ color: 0x607281 })); mesh.position.set(s.x, 0.75, s.z); scene.add(mesh); label(`Speaker ${s.id}`, s.x, 2, s.z); return mesh; });
-            const person = new T.Mesh(new T.CylinderGeometry(0.18, 0.25, 1.65, 12), new T.MeshStandardMaterial({ color: 0xbe827b })); person.position.set(0, 0.825, -4.111); scene.add(person); label('Clarinetist · silent', 0, 2.2, -4.111);
-            room = { scene, camera, renderer, meshes }; return true;
+            const labels = [];
+            const meshes = C.speakers.map(s => {
+                const mesh = new T.Mesh(new T.BoxGeometry(0.55, 1.5, 0.45), new T.MeshStandardMaterial({ color: 0x607281 }));
+                mesh.position.set(s.x, 0.75, s.z); scene.add(mesh);
+                const chip = document.createElement('span'); chip.className = 'room-speaker-chip'; chip.textContent = s.id; chip.setAttribute('aria-hidden', 'true'); $('room-view').append(chip);
+                labels.push({chip, point:new T.Vector3(s.x, 2.2, s.z)}); return mesh;
+            });
+            const person = new T.Mesh(new T.CylinderGeometry(0.18, 0.25, 1.65, 12), new T.MeshStandardMaterial({ color: 0xbe827b })); person.position.set(0, 0.825, -4.111); scene.add(person);
+            const listenerMarker = new T.Group();
+            const point = new T.Mesh(new T.SphereGeometry(0.22, 16, 12), new T.MeshBasicMaterial({color:0xffffff})); point.position.y = 0.3; listenerMarker.add(point);
+            const direction = new T.ArrowHelper(new T.Vector3(0, 0, -1), new T.Vector3(0, 0.15, 0), 1.2, 0xffffff, 0.35, 0.25); listenerMarker.add(direction); scene.add(listenerMarker);
+            room = { scene, camera, overview, renderer, meshes, labels, listenerMarker,
+                raycaster: new T.Raycaster(), floorPlane: new T.Plane(new T.Vector3(0, 1, 0), 0) }; return true;
         } catch (error) { $('app-message').textContent = '3D is unavailable on this device. Listening positions and the room map still work.'; console.warn(error); return false; }
+    }
+    function renderRoomControls() {
+        document.querySelectorAll('[data-room-view]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.roomView === roomView)));
+        $('room-help').textContent = roomView === 'whole' ? 'Tap the floor to move your listening point. Drag to rotate the view.' : 'Drag to turn your head. Hold the arrows to move. Whole room shows where you are.';
+        $('room-legend').textContent = roomView === 'whole' ? 'White marker: you · red marker: clarinetist' : 'Your listening point · red marker: clarinetist';
+        $('room-view').dataset.view = roomView;
+    }
+    function closeRoom() {
+        clearInputs(); session.free = false; renderControls(); $('free-move').focus();
     }
     function paintRoom() {
         if (!session.free || !room) return;
         const el = $('room-view'), w = el.clientWidth, h = el.clientHeight;
         if (!w || !h) return;
-        if (room.width !== w || room.height !== h) {
-            room.renderer.setSize(w, h, false); room.camera.aspect = w / h; room.camera.updateProjectionMatrix();
-            room.width = w; room.height = h;
+        const ratio = Math.min(devicePixelRatio || 1, 2);
+        if (room.width !== w || room.height !== h || room.pixelRatio !== ratio) {
+            room.renderer.setPixelRatio(ratio); room.renderer.setSize(w, h, false);
+            room.camera.aspect = w / h; room.camera.fov = C.eyeFov(w / h); room.camera.updateProjectionMatrix();
+            const bounds = C.overviewBounds(w / h);
+            Object.assign(room.overview, {left:-bounds.halfWidth,right:bounds.halfWidth,top:bounds.halfHeight,bottom:-bounds.halfHeight});
+            room.overview.updateProjectionMatrix();
+            room.width = w; room.height = h; room.pixelRatio = ratio;
         }
-        const p = session.pose; room.camera.position.set(p.x, p.y, p.z); room.camera.lookAt(p.x - Math.sin(p.yaw), p.y, p.z - Math.cos(p.yaw));
+        const p = session.pose;
+        room.camera.position.set(p.x, p.y, p.z); room.camera.lookAt(p.x - Math.sin(p.yaw), p.y, p.z - Math.cos(p.yaw));
+        room.overview.position.set(Math.sin(orbitYaw) * 18, 22, Math.cos(orbitYaw) * 18); room.overview.lookAt(0, 0, 0);
+        room.listenerMarker.position.set(p.x, 0, p.z); room.listenerMarker.rotation.y = p.yaw;
+        room.listenerMarker.visible = roomView === 'whole';
         room.meshes.forEach((mesh, i) => { mesh.material.color.setRGB(0.2 + accentLights[i] * 0.65, 0.28 + accentLights[i] * 0.25, 0.33 - accentLights[i] * 0.2); });
-        room.renderer.render(room.scene, room.camera);
+        const activeCamera = roomView === 'whole' ? room.overview : room.camera;
+        room.renderer.render(room.scene, activeCamera);
+        room.labels.forEach(({chip, point}, i) => {
+            const screen = point.clone().project(activeCamera);
+            chip.hidden = Math.abs(screen.x) > 0.94 || Math.abs(screen.y) > 0.94 || screen.z < -1 || screen.z > 1;
+            chip.style.left = `${(screen.x + 1) / 2 * w}px`; chip.style.top = `${(1 - screen.y) / 2 * h}px`;
+            chip.classList.toggle('accent', accentLights[i] > 0.15);
+        });
+        el.dataset.listener = [p.x, p.z, p.yaw].map(n => n.toFixed(2)).join(',');
+    }
+    function placeListener(event) {
+        if (!room || roomView !== 'whole') return;
+        const rect = $('room-view').getBoundingClientRect();
+        const point = new THREE.Vector2((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1);
+        room.raycaster.setFromCamera(point, room.overview);
+        const location = room.raycaster.ray.intersectPlane(room.floorPlane, new THREE.Vector3());
+        if (location) { session.moveTo(location.x, location.z); updateListener(); requestRender(); }
     }
     function requestRender() { if (!raf && !document.hidden) raf = requestAnimationFrame(frame); }
     function frame(now) {
@@ -264,7 +305,13 @@
     buildControls();
     document.querySelectorAll('button[data-experience]').forEach(button => button.addEventListener('click', () => { clearInputs(); session.setMode(button.dataset.experience); renderControls(); }));
     document.querySelectorAll('[data-position]').forEach(button => button.addEventListener('click', () => { clearInputs(); session.free = false; session.setPosition(button.dataset.position); renderControls(); }));
-    $('free-move').addEventListener('click', () => { clearInputs(); if (session.free) session.free = false; else if (createRoom()) session.free = true; renderControls(); });
+    $('free-move').addEventListener('click', () => {
+        clearInputs();
+        if (createRoom()) { session.free = true; roomView = 'whole'; orbitYaw = 0; renderControls(); $('close-room').focus(); }
+    });
+    $('close-room').addEventListener('click', closeRoom);
+    $('reset-room').addEventListener('click', () => { clearInputs(); session.setPosition('audience'); orbitYaw = 0; roomView = 'whole'; renderRoomControls(); updateListener(); requestRender(); });
+    document.querySelectorAll('[data-room-view]').forEach(button => button.addEventListener('click', () => { clearInputs(); roomView = button.dataset.roomView; renderRoomControls(); requestRender(); }));
     document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => { view = button.dataset.view; renderControls(); }));
     $('cue-guide').addEventListener('change', () => { guide = $('cue-guide').checked; renderControls(); });
     $('input-style').addEventListener('change', () => { clearInputs(); session.setInputStyle($('input-style').value); renderControls(); });
@@ -276,6 +323,7 @@
     $('score-zoom').addEventListener('input', () => { $('full-score').style.width = `${$('score-zoom').value}%`; $('score-zoom-value').textContent = `${$('score-zoom').value}%`; });
     function editing(event) { return event.ctrlKey || event.metaKey || event.altKey || Boolean(event.target.closest('input,select,textarea,[contenteditable="true"],summary')); }
     document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && session.free) { event.preventDefault(); closeRoom(); return; }
         if (editing(event)) return;
         const key = event.key.toLowerCase();
         if (session.mode === 'mix') {
@@ -285,10 +333,34 @@
         } else if (session.free && ['w', 'a', 's', 'd', 'j', 'l'].includes(key)) { event.preventDefault(); keys.add(key); requestRender(); }
     });
     document.addEventListener('keyup', event => { const key = event.key.toLowerCase(); session.release(`key:${key}`); keys.delete(key); applyMix(); requestRender(); });
-    document.querySelectorAll('[data-walk]').forEach(button => { button.addEventListener('pointerdown', event => { event.preventDefault(); button.setPointerCapture(event.pointerId); walkPointers.set(event.pointerId, button.dataset.walk); requestRender(); }); ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(name => button.addEventListener(name, event => walkPointers.delete(event.pointerId))); });
-    $('room-view').addEventListener('pointerdown', event => { if (!session.free) return; drag = { id: event.pointerId, x: event.clientX }; $('room-view').setPointerCapture(event.pointerId); });
-    $('room-view').addEventListener('pointermove', event => { if (drag?.id !== event.pointerId) return; session.pose.yaw -= (event.clientX - drag.x) * 0.006; drag.x = event.clientX; updateListener(); requestRender(); });
-    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(name => $('room-view').addEventListener(name, () => { drag = null; }));
+    document.querySelectorAll('[data-walk]').forEach(button => {
+        button.addEventListener('pointerdown', event => { if (event.button !== 0 || !session.free) return; event.preventDefault(); button.setPointerCapture(event.pointerId); walkPointers.set(event.pointerId, button.dataset.walk); requestRender(); });
+        ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(name => button.addEventListener(name, event => walkPointers.delete(event.pointerId)));
+        button.addEventListener('click', event => {
+            if (event.detail !== 0) return;
+            const motion = button.dataset.walk;
+            session.move(Number(motion === 'forward') - Number(motion === 'back'), Number(motion === 'right') - Number(motion === 'left'), Number(motion === 'turn-left') - Number(motion === 'turn-right'), 0.25);
+            updateListener(); requestRender();
+        });
+    });
+    $('room-view').addEventListener('pointerdown', event => {
+        if (!session.free || event.button !== 0 || drag) return;
+        drag = { id:event.pointerId, x:event.clientX, startX:event.clientX, startY:event.clientY, moved:false };
+        $('room-view').setPointerCapture(event.pointerId);
+    });
+    $('room-view').addEventListener('pointermove', event => {
+        if (drag?.id !== event.pointerId) return;
+        if (Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > 8) drag.moved = true;
+        if (drag.moved) {
+            const change = (event.clientX - drag.x) / Math.max(240, $('room-view').clientWidth) * Math.PI * 1.5;
+            if (roomView === 'whole') orbitYaw -= change;
+            else { session.pose.yaw -= change; session.customPosition = true; updateListener(); }
+            requestRender();
+        }
+        drag.x = event.clientX;
+    });
+    $('room-view').addEventListener('pointerup', event => { if (drag?.id !== event.pointerId) return; const tap = !drag.moved; drag = null; if (tap) placeListener(event); });
+    ['pointercancel', 'lostpointercapture'].forEach(name => $('room-view').addEventListener(name, event => { if (drag?.id === event.pointerId) drag = null; }));
     window.addEventListener('blur', clearInputs); document.addEventListener('visibilitychange', () => { clearInputs(); if (!document.hidden) requestRender(); });
     window.addEventListener('pagehide', () => { clearInputs(); playback.stop(); });
     audio.addEventListener('loadedmetadata', () => { buildTimeline(); renderTransport(); requestRender(); });

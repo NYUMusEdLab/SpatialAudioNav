@@ -99,3 +99,11 @@ Preview 04 restores all twelve accent/release pairs, preserving the surrounding 
 The timeline now shows short accent bars with fading release tails. In Listen/Explore, amber pulses measure signal above the common surrounding bed instead of displaying persistent gold routing rings. Pausing extinguishes sound light. In Mix, a thin white selection outline and optional dashed example cue distinguish controls from audible excess. Physical devices and auditory localization remain unverified.
 
 Regression checks now run the original stateful automation against every boundary, verify brief rise/decay and late background, check signal-relative light, and test scheduled releases and cancellation on manual takeover/pause. Preview 03 and all earlier snapshots remain unchanged; Preview 04 is the recommended version.
+
+## Preview 05 — usable mobile room navigation, 6 October 2026
+
+The prior renderer updated drawing-buffer dimensions with `setSize(..., false)` but left the canvas CSS size unset. A high-density buffer could therefore overflow the small frame; observed dimensions were 704×556 inside 354×280. Preview 05 explicitly fits the canvas to its container and updates pixel ratio/aspect on resize.
+
+Opening 3D now dedicates the available screen to the room, with transport and Back retained. Whole room fits the speaker ring in portrait and landscape, shows the listener and heading, and supports tapping the floor to move. Dragging this overview rotates the camera without moving or turning the audio listener. Eye level follows the listener, with drag-to-turn and a wider portrait field of view. Hold buttons and keyboard movement remain available. Reset restores the audience position/whole-room view. Custom positions persist when returning to Explore and are not mislabeled as presets.
+
+The musical and gain automation is unchanged from Preview 04. Focus/held-input cleanup, view switching during playback, viewport changes, tap bounds, and camera framing are checked. Physical-phone touch and Safari testing remain release verification work. All earlier numbered previews and the original are preserved.

@@ -9,7 +9,7 @@
 </head>
 <body data-experience="listen">
 <header class="app-header">
-  <div><p class="eyebrow">SpatialAudioNav · Preview 04</p><h1>Dialogue de l’ombre double</h1></div>
+  <div><p class="eyebrow">SpatialAudioNav · Preview 05</p><h1>Dialogue de l’ombre double</h1></div>
   <nav class="experience-switch" aria-label="Choose your experience">
     <button data-experience="listen" aria-pressed="true">Listen</button>
     <button data-experience="explore" aria-pressed="false">Explore</button>
@@ -48,18 +48,21 @@
       </div>
     </section>
     <section class="spatial-workspace" aria-label="Spatial listening display">
-      <div id="walk-panel" hidden>
-        <div id="room-view" aria-label="3D listening room"></div>
-        <div class="walk-controls" aria-label="Move through the room"><button data-walk="left" aria-label="Move left">←</button><button data-walk="forward" aria-label="Move forward">↑</button><button data-walk="back" aria-label="Move backward">↓</button><button data-walk="right" aria-label="Move right">→</button><button data-walk="turn-left">Turn left</button><button data-walk="turn-right">Turn right</button></div>
-        <p class="small-note">Move with W A S D; turn with J / L or drag the room. The buttons also work by touch.</p>
-      </div>
+      <section id="walk-panel" hidden aria-label="Explore the listening room">
+        <div class="room-toolbar"><button id="close-room">← Back</button><strong>Explore the room</strong><button id="reset-room" aria-label="Reset listening position and view">Reset</button></div>
+        <div class="room-views" aria-label="Room view"><button data-room-view="whole" aria-pressed="true">Whole room</button><button data-room-view="eye" aria-pressed="false">Eye level</button></div>
+        <div id="room-view" tabindex="0" role="img" aria-label="Interactive six-speaker listening room" aria-describedby="room-help"></div>
+        <div class="room-instructions"><p id="room-help">Tap the floor to move your listening point. Drag to rotate the view.</p><span id="room-legend">White marker: you · red marker: clarinetist</span></div>
+        <div class="walk-controls" aria-label="Move through the room"><button data-walk="left" aria-label="Move left">←</button><button data-walk="forward" aria-label="Move forward">↑</button><button data-walk="back" aria-label="Move backward">↓</button><button data-walk="right" aria-label="Move right">→</button><button data-walk="turn-left" aria-label="Turn left">↶</button><button data-walk="turn-right" aria-label="Turn right">↷</button></div>
+        <p class="room-keyboard-hint">Hold arrows to move or turn · Keyboard: W A S D, J / L · Esc to go back</p>
+      </section>
       <div class="room-map"><canvas id="room-map" role="img" aria-label="Six-speaker room map, clarinetist, and your listening position"></canvas></div>
       <p id="map-legend" class="map-legend">The blue circle follows the surrounding sound. Amber pulses show brief accents above it.</p>
       <p id="level-summary" class="level-summary">Example mix · surrounding background</p>
     </section>
     <aside class="listening-prompt" id="listening-prompt"><span class="eyebrow" id="prompt-kicker">Listen for</span><h3 id="prompt-title">A gesture comes forward</h3><p id="prompt-text">Hear the sound surrounding you, then notice a brief louder gesture at one speaker, then hear it return to the surrounding sound.</p><p class="small-note">The clarinetist is silent during this recorded transition. Each accent rises briefly, then fades back into the surrounding sound.</p></aside>
   </div>
-  <details class="about"><summary>About this excerpt and preview</summary><div><p>This study lets you listen to the example, change listening position, or perform the spatial mix yourself. Switching experiences keeps your place in the recording. Use headphones.</p><p>Transition I–II contrasts a quieter background on all six speakers with foreground gestures. <a href="https://brahms.ircam.fr/en/analysis/analyse-de-i-dialogue-de-l-ombre-double-i-%281985%29-de-pierre-boulez" target="_blank" rel="noopener">Read Andrew Gerzso’s IRCAM analysis.</a></p><p>Preview 04 focuses on this one excerpt. It restores the earlier prototype’s paired accent and release timings; musical timing, score alignment, and asset credits still require final review. The position model is an educational approximation.</p></div></details>
+  <details class="about"><summary>About this excerpt and preview</summary><div><p>This study lets you listen to the example, change listening position, or perform the spatial mix yourself. Switching experiences keeps your place in the recording. Use headphones.</p><p>Transition I–II contrasts a quieter background on all six speakers with foreground gestures. <a href="https://brahms.ircam.fr/en/analysis/analyse-de-i-dialogue-de-l-ombre-double-i-%281985%29-de-pierre-boulez" target="_blank" rel="noopener">Read Andrew Gerzso’s IRCAM analysis.</a></p><p>Preview 05 focuses on this one excerpt. It restores the earlier prototype’s paired accent and release timings; musical timing, score alignment, and asset credits still require final review. The position model is an educational approximation.</p></div></details>
   <p id="app-message" role="status" aria-live="polite"></p>
 </main>
 <footer class="transport" aria-label="Playback">

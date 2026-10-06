@@ -36,7 +36,7 @@ if __name__ == '__main__':
     if len(sys.argv) in (3, 4) and sys.argv[1] == '--participation':
         ref = sys.argv[2]
         version = sys.argv[3] if len(sys.argv) == 4 else '03-listen-explore-mix'
-        if version not in {'03-listen-explore-mix', '04-brief-accents'}:
+        if version not in {'03-listen-explore-mix', '04-brief-accents', '05-room-navigation'}:
             raise SystemExit('Unknown participation preview version')
         label = f'Preview {version[:2]}'
         print(json.dumps({
