@@ -48,6 +48,8 @@ let gainNodes = [];
 let masterGain = null;
 let panners = [];
 let audioInitialized = false;
+let playbackGeneration = 0;
+let playbackPending = false;
 
 // Set constants for audio positioning
 const posX = 0, posY = 1.7, posZ = 0;
@@ -292,8 +294,7 @@ function initAudioContext() {
                 resolve();
             }).catch(error => {
                 console.error("Error during Web Audio setup:", error);
-                // Still resolve since we at least have the AudioContext
-                resolve();
+                reject(error);
             });
         } catch (error) {
             console.error("Failed to create Audio Context:", error);
@@ -375,6 +376,7 @@ function setupWebAudio() {
         audioElements[currentScene] = newAudio;
         currentAudioElement = newAudio;
         window.audioElement = currentAudioElement;
+        bindPlaybackEvents(newAudio);
 
         // For Strophe V, also create the wet audio element
         if (currentScene === 'stropheV' && stropheWetAudioElement) {
@@ -390,6 +392,7 @@ function setupWebAudio() {
             newWetAudio.crossOrigin = "anonymous";
             document.body.appendChild(newWetAudio);
             stropheWetAudioElement = newWetAudio;
+            bindPlaybackEvents(newWetAudio);
         }
 
         // Now create the MediaElementSourceNode for the new element
@@ -651,153 +654,67 @@ function playSpeaker(pattern) {
     }
 }
 
-// Simplified play/pause handler
-function togglePlayback() {
-    // Check if audio element exists
-    if (!currentAudioElement) {
-        console.error("Audio element not found!");
-        alert("Audio element not found. Check the HTML structure.");
-        return;
-    }
-    
-    console.log("Toggle playback called");
-    
-    // Initialize audio if needed
-    if (!audioCtx) {
-        initAudioContext().then(() => {
-            actuallyTogglePlayback();
-        }).catch(error => {
-            console.error("Failed to initialize audio:", error);
-            
-            // Try direct playback as last resort
-            tryDirectPlayback();
-        });
-    } else {
-        // Resume context if needed
-        if (audioCtx.state === 'suspended') {
-            audioCtx.resume().then(() => {
-                actuallyTogglePlayback();
-            }).catch(error => {
-                console.error("Failed to resume audio context:", error);
-                tryDirectPlayback();
-            });
-        } else {
-            actuallyTogglePlayback();
-        }
-    }
+// Every asynchronous playback attempt belongs to one scene generation.
+function setPlaybackState(playing) {
+    playPauseButton.dataset.playing = String(playing);
+    playPauseButton.style.setProperty('--play-pause-icon', playing ? '"\\23F8"' : '"\\25B6"');
+    playPauseButton.title = playing ? 'Pause Audio' : 'Play Audio';
 }
 
-// Function to actually handle play/pause state
-function actuallyTogglePlayback() {
-    if (playPauseButton.dataset.playing === 'false') {
-        console.log("Attempting to play audio...");
-        
-        if (currentScene === 'stropheV' && stropheWetAudioElement) {
-            // For Strophe V, synchronize both dry and wet audio
-            playStropheVSynchronized();
-        } else {
-            // Normal single audio playback
-            const playPromise = currentAudioElement.play();
-            if (playPromise !== undefined) {
-                playPromise.then(() => {
-                    console.log("Audio playback started successfully!");
-                    playPauseButton.dataset.playing = 'true';
-                    playPauseButton.style.setProperty('--play-pause-icon', '"\\23F8"');
-                    playPauseButton.title = "Pause Audio";
-                    
-                    if (audioInitialized) {
-                        startPatternSwitching();
-                        startSpecialEffects();
-                    }
-                }).catch(error => {
-                    console.error("Error playing audio:", error);
-                    tryDirectPlayback();
-                });
-            }
-        }
-    } else {
-        console.log("Pausing audio");
-        if (currentScene === 'stropheV' && stropheWetAudioElement) {
-            // Pause both dry and wet audio for Strophe V
-            currentAudioElement.pause();
-            stropheWetAudioElement.pause();
-            isStropheVPlaying = false;
-        } else {
-            currentAudioElement.pause();
-        }
-        
-        playPauseButton.dataset.playing = 'false';
-        playPauseButton.style.setProperty('--play-pause-icon', '"\\25B6"');
-        playPauseButton.title = "Play Audio";
-        stopPatternSwitching();
-        stopSpecialEffects();
-    }
+function stopPlayback() {
+    playbackGeneration++;
+    playbackPending = false;
+    if (currentAudioElement) currentAudioElement.pause();
+    if (stropheWetAudioElement) stropheWetAudioElement.pause();
+    isStropheVPlaying = false;
+    stopPatternSwitching();
+    stopSpecialEffects();
+    setPlaybackState(false);
 }
 
-// Function to play both dry and wet audio for Strophe V in sync
-function playStropheVSynchronized() {
-    // Set both audio elements to the same time
-    const currentTime = currentAudioElement.currentTime;
-    stropheWetAudioElement.currentTime = currentTime;
-    
-    // Play both simultaneously
-    const dryPromise = currentAudioElement.play();
-    const wetPromise = stropheWetAudioElement.play();
-    
-    Promise.all([dryPromise, wetPromise]).then(() => {
-        console.log("Strophe V synchronized playback started!");
-        playPauseButton.dataset.playing = 'true';
-        playPauseButton.style.setProperty('--play-pause-icon', '"\\23F8"');
-        playPauseButton.title = "Pause Audio";
-        isStropheVPlaying = true;
-        
-        if (audioInitialized) {
-            startPatternSwitching();
-            startSpecialEffects();
-            updateStropheVCrossfade();
+function bindPlaybackEvents(element) {
+    element.addEventListener('ended', () => {
+        if (element !== currentAudioElement) return;
+        stopPlayback();
+        updateArabicPlayhead();
+    });
+    element.addEventListener('error', () => {
+        if (element === currentAudioElement || element === stropheWetAudioElement) {
+            stopPlayback();
         }
-    }).catch(error => {
-        console.error("Error playing Strophe V synchronized audio:", error);
-        tryDirectPlayback();
     });
 }
 
-// Last resort direct playback
-function tryDirectPlayback() {
-    console.log("Attempting direct playback as fallback");
-    
-    // Unmute and set volume explicitly
-    currentAudioElement.muted = false;
-    currentAudioElement.volume = 1.0;
-    
-    // Add inline event listeners for this attempt
-    const successListener = () => {
-        console.log("Direct playback successful!");
-        playPauseButton.dataset.playing = 'true';
-        playPauseButton.style.setProperty('--play-pause-icon', '"\\23F8"');
-        currentAudioElement.removeEventListener('play', successListener);
-    };
-    
-    const errorListener = (e) => {
-        console.error("Direct playback failed:", e);
-        currentAudioElement.removeEventListener('error', errorListener);
-        alert("Could not play audio. Please check if the audio file exists and try again.");
-    };
-    
-    currentAudioElement.addEventListener('play', successListener);
-    currentAudioElement.addEventListener('error', errorListener);
-    
-    // Try to play with a slight delay
-    setTimeout(() => {
-        try {
-            const promise = currentAudioElement.play();
-            if (promise) {
-                promise.catch(e => console.error("Promise rejection in direct play:", e));
-            }
-        } catch (e) {
-            console.error("Exception in direct play:", e);
-        }
-    }, 300);
+async function togglePlayback() {
+    if (playbackPending || playPauseButton.dataset.playing === 'true') {
+        stopPlayback();
+        return;
+    }
+    const generation = ++playbackGeneration;
+    playbackPending = true;
+    let dry, wet;
+    try {
+        await initAudioContext();
+        if (generation !== playbackGeneration) return;
+        if (audioCtx.state === 'suspended') await audioCtx.resume();
+        if (generation !== playbackGeneration) return;
+        dry = currentAudioElement;
+        wet = currentScene === 'stropheV' ? stropheWetAudioElement : null;
+        if (dry.ended) dry.currentTime = 0;
+        if (wet) wet.currentTime = dry.currentTime;
+        await Promise.all([dry.play(), ...(wet ? [wet.play()] : [])]);
+        if (generation !== playbackGeneration) return;
+        playbackPending = false;
+        isStropheVPlaying = Boolean(wet);
+        setPlaybackState(true);
+        startPatternSwitching();
+        startSpecialEffects();
+        if (wet) updateStropheVCrossfade();
+    } catch (error) {
+        if (generation !== playbackGeneration) return;
+        stopPlayback();
+        console.error('Could not start playback:', error);
+    }
 }
 
 // Connect the play button to the toggle function
@@ -805,7 +722,8 @@ playPauseButton.addEventListener('click', togglePlayback);
 
 // Reset button functionality
 resetButton.addEventListener('click', () => {
-    const wasPlaying = playPauseButton.dataset.playing === 'true';
+    const wasPlaying = playPauseButton.dataset.playing === 'true' || playbackPending;
+    stopPlayback();
     currentAudioElement.pause();
     currentAudioElement.currentTime = 0;
     
@@ -836,7 +754,7 @@ resetButton.addEventListener('click', () => {
     }
     
     if (wasPlaying) {
-        setTimeout(() => playPauseButton.click(), 50);
+        togglePlayback();
     }
 });
 
@@ -1354,15 +1272,17 @@ function setMode(mode) {
 function setScene(scene) {
     if (!['default', 'transition1-2', 'transition3-4', 'stropheV'].includes(scene)) return;
     
-    // Stop any active animations
-    stopPatternSwitching();
-    stopSpecialEffects();
-    
-    // Always pause current audio
-    if (currentAudioElement) {
-        currentAudioElement.pause();
+    const wasPlaying = playPauseButton.dataset.playing === 'true' || playbackPending;
+    stopPlayback();
+    const generation = playbackGeneration;
+    // Keep one AudioContext. Disconnect the old graph before replacing its nodes.
+    for (const node of [audioSource, stropheWetAudioSource, masterGain,
+        performerDryPanner, hiddenWetPanner, ...panners, ...gainNodes,
+        ...wetPanners, ...wetGainNodes]) {
+        if (node) { try { node.disconnect(); } catch (error) {} }
     }
-    
+    stropheWetAudioSource = null;
+
     // Update scene 
     currentScene = scene;
     
@@ -1386,8 +1306,6 @@ function setScene(scene) {
     window.timestamps = timestampPatterns[scene].timestamps;
     window.presets = timestampPatterns[scene].patterns;
     
-    // Remember if we were playing
-    const wasPlaying = playPauseButton.dataset.playing === 'true';
     
     // Reset UI state
     playPauseButton.dataset.playing = 'false';
@@ -1417,68 +1335,22 @@ function setScene(scene) {
         }
     }
     
-    // If audio was initialized, need to recreate the audio context
-    if (audioInitialized) {
-        // Close existing audio context
-        if (audioCtx) {
-            // Disconnect all audio nodes
-            if (audioSource) {
-                try { audioSource.disconnect(); } catch (e) {}
-            }
-            
-            panners.forEach(panner => {
-                try { panner.disconnect(); } catch (e) {}
-            });
-            
-            gainNodes.forEach(gain => {
-                try { gain.disconnect(); } catch (e) {}
-            });
-            
-            if (masterGain) {
-                try { masterGain.disconnect(); } catch (e) {}
-            }
-            
-            // Close the audio context - this will clean up all resources
-            audioCtx.close().then(() => {
-                console.log("Audio context closed successfully");
-                
-                // Create a new audio context
-                audioCtx = new AudioContext({ latencyHint: 'interactive' });
-                window.audioCtx = audioCtx;
-                window.listener = audioCtx.listener;
-                
-                // Reset our tracking of connected elements
-                connectedAudioElements.clear();
-                
-                // Set up the audio system from scratch
-                setupWebAudio().then(() => {
-                    // Update UI to show the correct scene
-                    document.querySelectorAll('.scene-btn').forEach(btn => {
-                        btn.classList.toggle('active', btn.dataset.scene === scene);
-                    });
-                    
-                    // If we were playing before, start playing the new scene
-                    if (wasPlaying) {
-                        setTimeout(() => {
-                            togglePlayback();
-                        }, 100);
-                    }
-                });
-            }).catch(e => {
-                console.error("Error closing audio context:", e);
-                
-                // Even if closing fails, continue with UI updates
-                document.querySelectorAll('.scene-btn').forEach(btn => {
-                    btn.classList.toggle('active', btn.dataset.scene === scene);
-                });
-            });
-        }
-    } else {
-        // Just update UI if audio not initialized
-        document.querySelectorAll('.scene-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.scene === scene);
+    document.querySelectorAll('.scene-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.scene === scene);
+    });
+    if (audioCtx) {
+        setupWebAudio().then(() => {
+            if (generation !== playbackGeneration) return;
+            audioInitialized = true;
+            if (scene === 'stropheV') updateStropheVCrossfade();
+            if (wasPlaying) togglePlayback();
+        }).catch(error => {
+            if (generation !== playbackGeneration) return;
+            stopPlayback();
+            console.error('Could not switch audio scene:', error);
         });
     }
+
 }
 
 // Function to toggle mixing mode

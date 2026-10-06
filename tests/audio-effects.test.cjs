@@ -79,3 +79,120 @@ test('only one manual ramp and resonance controller remain', () => {
     assert.equal(source.includes('updateDryWetBalance('), false);
     assert.equal(source.includes('requestAnimationFrame(updateStropheVCrossfade)'), false);
 });
+
+function media() {
+    return {
+        currentTime: 0, ended: false, paused: true, listeners: {},
+        pause() { this.paused = true; },
+        play() { this.paused = false; return Promise.resolve(); },
+        addEventListener(name, callback) { this.listeners[name] = callback; },
+    };
+}
+function playbackContext() {
+    const ctx = context();
+    Object.assign(ctx, {
+        playbackGeneration: 0, playbackPending: false, isStropheVPlaying: false,
+        currentAudioElement: media(), stropheWetAudioElement: media(),
+        playPauseButton: { dataset: { playing: 'false' }, style: { setProperty() {} } },
+        initAudioContext: () => Promise.resolve(),
+        stopPatternSwitching() {}, stopSpecialEffects() {},
+        startPatternSwitching() {}, startSpecialEffects() {},
+        updateArabicPlayhead() {}, console: { error() {} },
+    });
+    for (const name of ['setPlaybackState', 'stopPlayback', 'bindPlaybackEvents']) {
+        vm.runInContext(functionSource(name), ctx);
+    }
+    vm.runInContext('async ' + functionSource('togglePlayback'), ctx);
+    return ctx;
+}
+
+test('Strophe V starts together and pauses both tracks', async () => {
+    const ctx = playbackContext();
+    ctx.currentAudioElement.currentTime = 12;
+    await ctx.togglePlayback();
+    assert.equal(ctx.stropheWetAudioElement.currentTime, 12);
+    assert.equal(ctx.playPauseButton.dataset.playing, 'true');
+    await ctx.togglePlayback();
+    assert.equal(ctx.currentAudioElement.paused, true);
+    assert.equal(ctx.stropheWetAudioElement.paused, true);
+    assert.equal(ctx.isStropheVPlaying, false);
+});
+
+test('partial Strophe V playback failure stops both tracks', async () => {
+    const ctx = playbackContext();
+    ctx.stropheWetAudioElement.play = () => Promise.reject(new Error('wet failed'));
+    await ctx.togglePlayback();
+    assert.equal(ctx.currentAudioElement.paused, true);
+    assert.equal(ctx.stropheWetAudioElement.paused, true);
+    assert.equal(ctx.playPauseButton.dataset.playing, 'false');
+});
+
+test('cancelling a pending start prevents stale completion from restarting controls', async () => {
+    const ctx = playbackContext();
+    let resolve, started;
+    const ready = new Promise(done => { started = done; });
+    ctx.currentAudioElement.play = () => new Promise(done => { resolve = done; started(); });
+    const playing = ctx.togglePlayback();
+    await ready;
+    ctx.stopPlayback();
+    resolve();
+    await playing;
+    assert.equal(ctx.playPauseButton.dataset.playing, 'false');
+    assert.equal(ctx.isStropheVPlaying, false);
+});
+
+test('track completion stops wet playback and replay resets both positions', async () => {
+    const ctx = playbackContext();
+    const dry = ctx.currentAudioElement;
+    ctx.bindPlaybackEvents(dry);
+    await ctx.togglePlayback();
+    dry.currentTime = 80;
+    dry.ended = true;
+    dry.listeners.ended();
+    assert.equal(ctx.playPauseButton.dataset.playing, 'false');
+    assert.equal(ctx.stropheWetAudioElement.paused, true);
+    await ctx.togglePlayback();
+    assert.equal(dry.currentTime, 0);
+    assert.equal(ctx.stropheWetAudioElement.currentTime, 0);
+});
+
+test('events from a replaced dry track do not stop the new scene', async () => {
+    const ctx = playbackContext();
+    const old = media();
+    ctx.bindPlaybackEvents(old);
+    await ctx.togglePlayback();
+    old.listeners.ended();
+    old.listeners.error();
+    assert.equal(ctx.playPauseButton.dataset.playing, 'true');
+});
+
+test('rapid scene switches stop the wet track and only restart the latest scene', async () => {
+    const ctx = playbackContext();
+    const completions = [];
+    const buttons = [];
+    Object.assign(ctx, {
+        audioSource: null, stropheWetAudioSource: null, masterGain: null,
+        performerDryPanner: null, hiddenWetPanner: null, panners: [],
+        wetPanners: [], wetGainNodes: [], currentMode: 'audience',
+        audioElements: { default: media(), 'transition1-2': media(), 'transition3-4': media(), stropheV: media() },
+        timestampPatterns: Object.fromEntries(['default', 'transition1-2', 'transition3-4', 'stropheV'].map(name => [name, {timestamps: [0], patterns: [[1,0,0,0,0,0]]}])),
+        hiddenSpeakerPosition: null,
+        updateScoreForCurrentScene() {}, resetT12SpeakerStates() {},
+        toggleVolumeDisplayVisibility() {}, toggleDryWetControlVisibility() {},
+        updateArabicVisualizationImage() {},
+        setupWebAudio: () => new Promise(done => completions.push(done)),
+    });
+    ctx.document.querySelectorAll = () => buttons;
+    vm.runInContext(functionSource('setScene'), ctx);
+    await ctx.togglePlayback();
+    ctx.setScene('transition1-2');
+    assert.equal(ctx.stropheWetAudioElement.paused, true);
+    ctx.setScene('transition3-4');
+    completions[0]();
+    completions[1]();
+    await Promise.resolve();
+    await Promise.resolve();
+    assert.equal(ctx.currentScene, 'transition3-4');
+    assert.equal(ctx.audioElements['transition1-2'].paused, true);
+    assert.equal(ctx.playPauseButton.dataset.playing, 'false');
+});

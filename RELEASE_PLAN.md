@@ -16,9 +16,10 @@ The `gh-pages` branch is frozen at `f4e7352db44d7d16d42339dc0199492fabca0cd7` (D
 
 ## 2. Playback lifecycle
 
-- Stop both Strophe V tracks when leaving the scene, on failure, and at playback completion.
-- Make rapid scene switching safe; keep scene selection, audio graph, and playback controls consistent.
-- Reset controls at track completion and verify replay, seek, pause, and reset.
+- [x] Stop both Strophe V tracks when leaving the scene, on failure, and at playback completion.
+- [x] Cancel stale asynchronous playback starts and reuse one audio context during scene switching.
+- [x] Reset controls at track completion and reset ended tracks for replay.
+- [ ] Complete listening checks for seek and reset across all scenes.
 - Ensure keyboard input does not interfere with focused controls; clear held keys on focus loss.
 
 ## 3. Layout and accessibility
@@ -46,4 +47,4 @@ The `gh-pages` branch is frozen at `f4e7352db44d7d16d42339dc0199492fabca0cd7` (D
 
 ## Verification so far
 
-The existing live site loads and starts playback; mode and scene switching respond without immediate console errors. This is a smoke check, not musical or cross-browser approval. Focused audio regression tests run with `node --test tests/audio-effects.test.cjs`. Remaining release gates are deliberately unchecked.
+The existing live site loads and starts playback; mode and scene switching respond without immediate console errors. This is a smoke check, not musical or cross-browser approval. Focused audio regression tests run with `node --test tests/audio-effects.test.cjs`. Local preview also verified rapid scene changes, synchronized Strophe V playback, and pausing both tracks without console errors. Ten focused regression tests pass. Remaining release gates are deliberately unchecked.
