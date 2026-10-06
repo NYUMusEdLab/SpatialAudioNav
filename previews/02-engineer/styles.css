@@ -1,0 +1,1190 @@
+/* Reset styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body, html {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    background-color: #000;
+    font-family: 'Inter', sans-serif;
+    color: #f0f0f0;
+}
+
+/* Immersive container - takes the full screen */
+#immersive-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #000;
+    overflow: hidden;
+}
+
+#scene-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    width: 100%;
+    height: 100%;
+}
+
+/* Mode Selector */
+.mode-selector {
+    position: absolute;
+    top: 30px;
+    left: 30px;
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 10px;
+    padding: 10px;
+    z-index: 110;
+    border: 1px solid #e69138;
+    box-shadow: 0 0 15px rgba(230, 145, 56, 0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mode-label {
+    font-size: 14px;
+    color: #e69138;
+    margin-bottom: 5px;
+    text-align: center;
+}
+
+.mode-options {
+    display: flex;
+    gap: 5px;
+}
+
+.mode-btn {
+    padding: 5px 10px;
+    background-color: rgba(50, 50, 50, 0.7);
+    border: 1px solid #777;
+    border-radius: 5px;
+    color: #ddd;
+    cursor: pointer;
+    font-size: 12px;
+    /* transition: all 0.2s; */
+}
+
+.mode-btn.active {
+    background-color: #e69138;
+    color: #000;
+    border-color: #e69138;
+    box-shadow: 0 0 10px rgba(230, 145, 56, 0.8);
+}
+
+/* Mix Mode Toggle */
+.mix-mode-toggle {
+    position: absolute;
+    top: 85px;
+    left: 30px;
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 10px;
+    padding: 10px;
+    z-index: 110;
+    border: 1px solid #e69138;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 0 15px rgba(230, 145, 56, 0.5);
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 45px;
+    height: 24px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #555;
+    transition: .4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+}
+
+input:checked + .slider {
+    background-color: #e69138;
+}
+
+input:checked + .slider:before {
+    transform: translateX(21px);
+}
+
+.slider.round {
+    border-radius: 24px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
+/* Scene Selector */
+.scene-selector {
+    position: absolute;
+    top: 180px;
+    left: 30px;
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 10px;
+    padding: 10px;
+    z-index: 110;
+    border: 1px solid #e69138;
+    box-shadow: 0 0 15px rgba(230, 145, 56, 0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.scene-btn {
+    padding: 8px 12px;
+    background-color: rgba(50, 50, 50, 0.7);
+    border: 1px solid #777;
+    border-radius: 5px;
+    color: #ddd;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+    text-align: left;
+}
+
+.scene-btn.active {
+    background-color: #e69138;
+    color: #000;
+    border-color: #e69138;
+    box-shadow: 0 0 10px rgba(230, 145, 56, 0.8);
+}
+
+/* Joystick styles */
+#joystick-container {
+    position: absolute;
+    bottom: 290px;
+    right: 100px;
+    width: 120px;
+    height: 120px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    z-index: 100;
+    border: 2px solid rgba(230, 145, 56, 0.7);
+    box-shadow: 0 0 20px rgba(230, 145, 56, 0.3);
+}
+
+/* Rotation indicator */
+.rotation-indicator {
+    position: absolute;
+    top: 30px;
+    right: 30px;
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 10px 15px;
+    border-radius: 30px;
+    color: #e69138;
+    font-weight: bold;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 100;
+    border: 1px solid #e69138;
+    box-shadow: 0 0 10px rgba(230, 145, 56, 0.4);
+}
+
+.indicator-label {
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.indicator-value {
+    font-size: 20px;
+}
+
+/* Audio controls */
+.audio-controls {
+    position: absolute;
+    bottom: 150px;
+    left: 30px;
+    display: flex;
+    gap: 20px;
+    z-index: 100;
+}
+
+#playPauseButton, #resetButton {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: #e69138;
+    font-size: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.3s ease;
+    border: 2px solid #e69138;
+    box-shadow: 0 0 15px rgba(230, 145, 56, 0.3);
+}
+
+/* Replace the current #toggleArabicBtn style with this */
+#toggleArabicBtn {
+    position: absolute;
+    top: 180px;
+    left: 180px;
+    width: 165px;
+    height: 40px;
+    background-color: rgba(51, 51, 51, 0.7);
+    color: white;
+    border: 1px solid #e69138;
+    border-radius: 8px;
+    cursor: pointer;
+    z-index: 9999; /* Increased to ensure always on top */
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+    padding: 8px 12px;
+    box-shadow: 0 0 10px rgba(230, 145, 56, 0.2);
+}
+
+#toggleArabicBtn:hover {
+    background-color: rgba(80, 80, 80, 0.9);
+}
+
+#toggleArabicBtn.active {
+    background-color: #e69138;
+    color: #000;
+    box-shadow: 0 0 15px rgba(230, 145, 56, 0.6);
+}
+
+#playPauseButton:hover, #resetButton:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 20px rgba(230, 145, 56, 0.6);
+    background-color: rgba(30, 30, 30, 0.7);
+}
+
+#playPauseButton::before {
+    content: var(--play-pause-icon, "\25B6"); /* Play triangle */
+}
+
+#resetButton::before {
+    content: "\21BA"; /* Curved arrow */
+}
+
+/* Add tooltips for the buttons */
+#playPauseButton, #resetButton {
+    position: relative;
+}
+
+#playPauseButton::after, #resetButton::after {
+    position: absolute;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+
+#playPauseButton::after {
+    content: attr(title); /* Use the title attribute */
+}
+
+#resetButton::after {
+    content: attr(title); /* Use the title attribute */
+}
+
+#playPauseButton:hover::after, #resetButton:hover::after {
+    opacity: 1;
+}
+
+/* Sound wave visualization */
+.sound-wave {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0.7;
+    background: radial-gradient(circle, rgba(230, 145, 56, 0.5) 0%, rgba(230, 145, 56, 0) 70%);
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* 2D Top-down visualization */
+.topdown-view {
+    position: absolute;
+    top: 50px;
+    right: 30px;
+    width: 200px;
+    height: 200px;
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 10px;
+    padding: 10px;
+    z-index: 100;
+    border: 1px solid #e69138;
+    box-shadow: 0 0 20px rgba(230, 145, 56, 0.6);
+    display: flex;
+    flex-direction: column;
+}
+
+.view-label {
+    font-size: 13px;
+    color: #e69138;
+    margin-bottom: 5px;
+    text-align: center;
+    text-shadow: 0 0 5px rgba(230, 145, 56, 0.8);
+}
+
+#topdown-canvas {
+    flex: 1;
+    width: 100%;
+    height: calc(100% - 17px);
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 5px;
+}
+
+/* Trivia Button and Container */
+#triviaButton {
+    position: absolute;
+    top: 30px;
+    left: 264px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid #e69138;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: #e69138;
+    font-size: 20px;
+    font-weight: bold;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    z-index: 110;
+    box-shadow: 0 0 15px rgba(230, 145, 56, 0.5);
+    font-style: italic;
+    transition: all 0.2s;
+}
+
+#triviaButton:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 20px rgba(230, 145, 56, 0.8);
+}
+
+.trivia-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    max-width: 700px;
+    height: 80%;
+    max-height: 600px;
+    background-color: rgba(0, 0, 0, 0.9);
+    border: 2px solid #e69138;
+    border-radius: 15px;
+    z-index: 1000;
+    box-shadow: 0 0 30px rgba(230, 145, 56, 0.7);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.trivia-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background-color: rgba(230, 145, 56, 0.2);
+    border-bottom: 1px solid #e69138;
+}
+
+.trivia-header h2 {
+    color: #e69138;
+    font-size: 24px;
+}
+
+.close-trivia {
+    background: none;
+    border: none;
+    color: #e69138;
+    font-size: 28px;
+    cursor: pointer;
+    padding: 0 10px;
+    transition: all 0.2s;
+}
+
+.close-trivia:hover {
+    transform: scale(1.2);
+    color: #ff9d45;
+}
+
+.trivia-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    line-height: 1.6;
+}
+
+.trivia-content h3 {
+    color: #e69138;
+    margin-bottom: 15px;
+}
+
+.trivia-content p {
+    margin-bottom: 15px;
+}
+
+.trivia-content img {
+    max-width: 100%;
+    border-radius: 8px;
+    margin: 15px 0;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.6);
+}
+
+.trivia-navigation {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    padding: 15px;
+    background-color: rgba(230, 145, 56, 0.1);
+    border-top: 1px solid #e69138;
+}
+
+.trivia-nav {
+    padding: 8px 15px;
+    background-color: rgba(50, 50, 50, 0.7);
+    border: 1px solid #777;
+    border-radius: 5px;
+    color: #e69138;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.trivia-nav:hover, .trivia-nav.active {
+    background-color: #e69138;
+    color: #000;
+    border-color: #e69138;
+}
+
+/* Contour View Toggle */
+.toggle-contour-view {
+    position: absolute;
+    bottom: 210px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 8px;
+    border: 1px solid #e69138;
+    overflow: hidden;
+    z-index: 110;
+    box-shadow: 0 0 15px rgba(230, 145, 56, 0.5);
+}
+
+.toggle-contour-view button {
+    padding: 8px 15px;
+    background-color: transparent;
+    border: none;
+    color: #e69138;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.toggle-contour-view button.active {
+    background-color: #e69138;
+    color: #000;
+}
+
+/* Music Visualization Container */
+.music-visualization-container {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 200px;
+    background-color: rgba(0, 0, 0, 0.7);
+    border-top: 1px solid #e69138;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+    z-index: 100;
+}
+
+/* Arabic Visualization Container */
+#arabic-visualization-container {
+    position: absolute;
+    bottom: 50px; /* Changed from 0 to 50px */
+    left: 50%; /* Center horizontally */
+    transform: translateX(-50%); /* Adjust for centering */
+    width: 90%; /* Adjust width as needed, or use max-width */
+    max-width: 1200px; /* Example max-width, adjust as needed */
+    height: 150px; /* Adjusted height from 100px to 200px */
+    background-color: rgba(0, 0, 0, 0.3); /* Optional background */
+    border: 2px solid #e69138; /* Orange outline */
+    border-radius: 20px; /* Corner radius */
+    overflow: hidden; /* Hide overflow and constrain playhead visually */
+    z-index: 105; /* Ensure it's above other bottom elements if necessary */
+}
+
+#arabic-visualization-image {
+    /* display: block; */
+    display:flex;
+    width: 100%;
+    height: 100%;
+    object-fit: fill; /* Changed from 'contain' to 'fill' to stretch vertically */
+}
+
+#arabic-playhead {
+    position: absolute;
+    top: 0;
+    left: 0; /* Initial position, JS will update based on percentage */
+    width: 3px; /* Width of the vertical bar */
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.7); /* Translucent white */
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+    pointer-events: none; /* Prevent interaction */
+    z-index: 106; /* Above the image */
+}
+
+.contour-display, .notation-display {
+    width: 100%;
+    height: 100%;
+    display: none;
+}
+
+.contour-display.active, .notation-display.active {
+    display: block;
+}
+
+#contour-canvas {
+    width: 100%;
+    height: 100%;
+}
+
+.notation-scroll {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 10px 0;
+    align-items: center;
+}
+
+.notation-image {
+    height: 180px;
+    margin: 0 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
+}
+
+/* Volume Display Panel Styles */
+#volume-display-panel {
+    position: absolute;
+    top: 50%; /* Center vertically */
+    left: 50%; /* Center horizontally */
+    transform: translate(-50%, -50%); /* Adjust for exact centering */
+    width: 500px; /* Adjusted width for 6 horizontal bars */
+    height: 300px;
+    background: rgba(0, 0, 0, 0.85);
+    color: #fff;
+    border: 2px solid #e69138;
+    border-radius: 12px;
+    padding: 15px;
+    z-index: 120;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    /* display: none; is handled by JS */
+}
+
+.volume-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 8px;
+}
+
+.volume-panel-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #e69138;
+    font-weight: bold;
+}
+
+.close-panel {
+    background: none;
+    border: none;
+    color: #e69138;
+    font-size: 24px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.close-panel:hover {
+    transform: rotate(90deg);
+}
+
+.performer-dropdown {
+    position: absolute;
+    top: 120px;
+    left: 30px;
+    background-color: rgba(0, 0, 0, 0.7);
+    border: 1px solid #e69138;
+    border-radius: 8px;
+    padding: 10px;
+    z-index: 110;
+    color: #f0f0f0;
+    display: block; /* Ensure it's visible */
+}
+
+.volume-bars-container {
+    display: flex; /* Use flexbox for horizontal layout */
+    flex-direction: row; /* Arrange items in a row */
+    justify-content: space-around; /* Distribute space around items */
+    align-items: flex-start; /* Align items to the top */
+    gap: 10px; /* Space between speaker groups */
+}
+
+
+
+.volume-bar-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.volume-bar-wrapper {
+    width: 30px; /* Width of the vertical bar container */
+    height: 120px;
+    position: relative;
+}
+
+.volume-bar {
+    width: 100%;
+    height: 100%;
+    background: #2a2a2a;
+    border-radius: 15px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.volume-fill {
+    background: linear-gradient(to top, #e69138, #ffb84d);
+    width: 100%;
+    height: 50%; /* Default starting at 50% */
+    position: absolute;
+    bottom: 0;
+    border-radius: 0 0 15px 15px;
+    transition: height 0.3s ease;
+}
+
+.volume-bar-group[data-active="true"] .volume-fill {
+    background: linear-gradient(to top, #ff6b35, #ff8c42);
+    box-shadow: 0 0 15px rgba(255, 107, 53, 0.5);
+    animation: pulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes pulse {
+    from { box-shadow: 0 0 10px rgba(255, 107, 53, 0.5); }
+    to { box-shadow: 0 0 20px rgba(255, 107, 53, 0.8); }
+}
+
+.volume-percentage {
+    position: absolute;
+    bottom: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    color: #e69138;
+    font-weight: bold;
+}
+
+.speaker-label {
+    font-size: 13px;
+    color: #e69138;
+    font-weight: bold;
+}
+
+/* Volume Display Toggle Button */
+#volumeDisplayBtn {
+    position: absolute;
+    top: 240px;
+    left: 180px;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.7);
+    color: #e69138;
+    border: 1px solid #e69138;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    z-index: 110;
+    transition: all 0.2s ease;
+}
+
+#volumeDisplayBtn:hover {
+    background: rgba(230, 145, 56, 0.2);
+}
+
+#volumeDisplayBtn.active {
+    background: #e69138;
+    color: #000;
+}
+
+/* Score Display Toggle Button */
+#scoreDisplayBtn {
+    position: absolute;
+    top: 390px;
+    left: 30px;
+    /* right: 252px; */
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.7);
+    color: #e69138;
+    border: 1px solid #e69138;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    z-index: 110;
+    transition: all 0.2s ease;
+}
+
+#scoreDisplayBtn:hover {
+    background: rgba(230, 145, 56, 0.2);
+}
+
+#scoreDisplayBtn.active {
+    background: #e69138;
+    color: #000;
+}
+
+/* Mobile optimization for volume panel */
+@media (max-width: 768px) {
+    #volume-display-panel {
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 90%; /* Use percentage for better responsiveness */
+        max-width: 320px; /* Max width on small screens */
+        padding: 10px;
+    }
+    
+    .volume-bars-container {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap; /* Allow bars to wrap to the next line */
+        justify-content: space-around;
+        gap: 8px; /* Adjust gap for mobile */
+    }
+    
+    .volume-bar-group {
+        /* Adjust basis for wrapping, e.g., fit 3 per row */
+        flex-basis: calc(33.33% - 10px); /* Adjust based on gap and desired items per row */
+        min-width: 60px; /* Ensure labels and bars are not too squished */
+    }
+
+    .volume-bar-wrapper {
+        height: 100px; /* Slightly shorter bars on mobile */
+        width: 25px; /* Slightly thinner bars on mobile */
+    }
+    
+    .speaker-label {
+        font-size: 11px; /* Smaller font for labels */
+    }
+
+    .volume-percentage {
+        font-size: 10px; /* Smaller font for percentage */
+        bottom: -20px; /* Adjust position */
+    }
+
+    #volumeDisplayBtn {
+        top: auto; /* Remove fixed top */
+        bottom: 20px; /* Position near bottom controls */
+        right: 20px;
+        font-size: 12px;
+        padding: 6px 10px;
+    }
+}
+
+/* Toggle button for minimized 3D view in Engineer Mode */
+.minimized-view-toggle-btn {
+    position: absolute;
+    top: 120px;   
+    left: 30px;
+    padding: 10px 16px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: #e69138;
+    border: 1px solid #e69138;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 16px;
+    z-index: 200;
+    transition: all 0.2s ease;
+}
+
+.minimized-view-toggle-btn:hover {
+    background-color: #e69138;
+    color: #000;
+}
+
+/* Class to hide the minimized scene container */
+.minimized-view-hidden {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+/* Engineer mode: Make 3D view smaller */
+#scene-container.minimized {
+    position: absolute;
+    top: 150px;
+    left: 200px;
+    /* Adjusted to avoid overlap with score panel (400px + 20px margin + 20px gap = 440px from right) */
+    right: 460px; 
+    width: 200px;
+    height: 200px;
+    border: 2px solid #e69138;
+    border-radius: 5px;
+    z-index: 150; /* Higher z-index to appear above other elements */
+    overflow: hidden; /* Add this line to clip the content */
+    transition: opacity 0.2s ease, visibility 0.2s ease; /* Smooth transitions for visibility changes */
+}
+
+/* Engineer mode: Make 2D topdown view expanded */
+.topdown-view.expanded {
+    width: calc(100% - 40px); /* Adjust for padding */
+    height: calc(100% - 40px); /* Adjust for padding */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    right: auto; /* Override default right positioning */
+}
+
+/* Dry/Wet Control for Strophe V */
+#dryWetControl {
+    position: absolute;
+    top: 240px;
+    left: 180px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid #e69138;
+    border-radius: 10px;
+    padding: 15px;
+    z-index: 110;
+    min-width: 200px;
+    box-shadow: 0 0 15px rgba(230, 145, 56, 0.3);
+    transition: all 0.3s ease;
+}
+
+.control-label {
+    color: #e69138;
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.slider-container {
+    position: relative;
+    margin-bottom: 8px;
+}
+
+.dry-wet-slider {
+    width: 100%;
+    height: 6px;
+    background: linear-gradient(to right, #4a4a4a 0%, #e69138 100%);
+    outline: none;
+    border-radius: 3px;
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.dry-wet-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: #e69138;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(230, 145, 56, 0.5);
+    transition: all 0.2s ease;
+}
+
+.dry-wet-slider::-webkit-slider-thumb:hover {
+    background: #ff9500;
+    box-shadow: 0 0 15px rgba(255, 149, 0, 0.8);
+    transform: scale(1.1);
+}
+
+.dry-wet-slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    background: #e69138;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 0 10px rgba(230, 145, 56, 0.5);
+    transition: all 0.2s ease;
+}
+
+.dry-wet-slider::-moz-range-thumb:hover {
+    background: #ff9500;
+    box-shadow: 0 0 15px rgba(255, 149, 0, 0.8);
+    transform: scale(1.1);
+}
+
+.slider-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #ccc;
+    margin-top: 5px;
+}
+
+.control-value {
+    text-align: center;
+    color: #e69138;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+/* Mobile optimization for dry/wet control */
+@media (max-width: 768px) {
+    #dryWetControl {
+        top: 150px;
+        right: 10px;
+        min-width: 150px;
+        padding: 10px;
+    }
+    
+    .control-label {
+        font-size: 12px;
+    }
+    
+    .slider-labels {
+        font-size: 10px;
+    }
+    
+    .control-value {
+        font-size: 11px;
+    }
+}
+
+/* Score Panel Styles for Audio Engineer */
+#score-panel {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 400px;
+    height: calc(100vh - 40px);
+    background: rgba(0, 0, 0, 0.9);
+    color: #fff;
+    border: 2px solid #e69138;
+    border-radius: 12px;
+    padding: 15px;
+    z-index: 110;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
+    transform: translateX(100%);
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    /* display: none; is handled by JS */
+}
+
+#score-panel.visible {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.score-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 8px;
+}
+
+.score-panel-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #e69138;
+    font-weight: bold;
+}
+
+.score-content {
+    height: calc(100% - 50px);
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.score-image-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100%;
+}
+
+#score-image {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+    transition: transform 0.3s ease;
+}
+
+#score-image:hover {
+    transform: scale(1.02);
+}
+
+/* Custom scrollbar for score panel */
+.score-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.score-content::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+.score-content::-webkit-scrollbar-thumb {
+    background: #e69138;
+    border-radius: 4px;
+    transition: background 0.3s ease;
+}
+
+.score-content::-webkit-scrollbar-thumb:hover {
+    background: #ffb84d;
+}
+
+/* Mobile optimization for score panel */
+@media (max-width: 768px) {
+    #score-panel {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        width: auto;
+        height: 50vh;
+        max-height: 400px;
+    }
+    
+    .score-panel-header h3 {
+        font-size: 16px;
+    }
+}
+/* Initial publication preview: one control column and a clear listening area. */
+[hidden] { display: none !important; }
+button, input, select { font: inherit; }
+button:focus-visible, select:focus-visible, input:focus-visible, #scene-container:focus-visible {
+    outline: 3px solid #85d6ed; outline-offset: 3px;
+}
+#title-container {
+    position: fixed; top: 24px; left: 330px; right: 28px;
+    z-index: 105; pointer-events: none; transition: opacity .3s ease;
+}
+#title-content h1 { font-size: clamp(20px, 2.4vw, 32px); color: #f6cf89; margin-bottom: 8px; }
+#title-content .description { font-size: 14px; color: #c6cbd1; }
+#title-content .attributions { display: none; }
+.info-open #title-container { opacity: 0; }
+#control-panel {
+    position: absolute; top: 20px; bottom: 48px; left: 20px; width: 280px;
+    overflow-y: auto; z-index: 200; padding: 16px; display: flex; flex-direction: column; gap: 14px;
+    background: #14191fed; border: 1px solid #3b4149; border-radius: 14px;
+}
+#control-panel .mode-selector, #control-panel .scene-selector, #control-panel .performer-dropdown,
+#control-panel #dryWetControl, #control-panel .audio-controls {
+    position: static; width: 100%; min-width: 0; margin: 0; padding: 0;
+    background: none; border: 0; box-shadow: none; transform: none;
+}
+#control-panel .mode-label { text-align: left; margin: 0; }
+#control-panel .mode-btn { flex: 1; min-height: 40px; }
+#control-panel .scene-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+#control-panel .scene-btn { font-size: 12px; min-height: 40px; padding: 8px; }
+#control-panel .performer-dropdown { display: flex; flex-direction: column; gap: 7px; }
+#control-panel select { width: 100%; color: #eee; background: #242b32; padding: 8px; border: 1px solid #59616a; border-radius: 6px; }
+#control-panel #toggleArabicBtn, #control-panel #volumeDisplayBtn, #control-panel #scoreDisplayBtn,
+#control-panel #triviaButton, #control-panel .minimized-view-toggle-btn {
+    position: static; width: 100%; height: auto; min-height: 38px; padding: 8px 10px;
+    border: 1px solid #626c76; border-radius: 7px; font-size: 13px; font-style: normal;
+    color: #eee; background: #242b32; box-shadow: none; transform: none;
+}
+#control-panel .minimized-view-toggle-btn:disabled { opacity: .45; cursor: not-allowed; }
+#control-panel .audio-controls { display: flex; justify-content: center; gap: 18px; }
+#control-panel #playPauseButton, #control-panel #resetButton { width: 46px; height: 46px; }
+.mode-audience #engineer-controls, .mode-audience .minimized-view-toggle-btn { display: none; }
+.mode-engineer #performer-dropdown-container, .mode-engineer .audience-help, .mode-engineer #joystick-container { display: none !important; }
+#engineer-controls { border-top: 1px solid #3b4149; padding-top: 14px; }
+.mix-choice { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.mix-choice button, .speaker-trigger {
+    color: #eee; background: #242b32; border: 1px solid #626c76; border-radius: 6px; padding: 9px 5px;
+    cursor: pointer; font-size: 12px; min-height: 40px;
+}
+.mix-choice button[aria-pressed=true], .speaker-trigger[aria-pressed=true] { color: #13171a; background: #f3ba68; border-color: #f3ba68; }
+#mix-help, .audience-help { font-size: 12px; line-height: 1.6; color: #c6cbd1; margin: 10px 0 0; }
+#speaker-controls { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin-top: 12px; }
+#dryWetControl .control-label { display: block; text-align: left; }
+#dryWetControl input:disabled { opacity: .45; }
+#map-legend { position: absolute; bottom: 48px; left: 330px; right: 24px; z-index: 100; font-size: 12px; line-height: 1.5; color: #bbc4ce; text-align: center; pointer-events: none; }
+.mode-audience #map-legend { display: none; }
+.mode-engineer .topdown-view.expanded {
+    top: 100px; bottom: 85px; left: 320px; right: 20px; width: auto; height: auto; transform: none;
+}
+.mode-audience .topdown-view { bottom: 55px; right: 24px; width: 220px; height: 220px; }
+#joystick-container { bottom: 75px; right: 265px; width: 100px; height: 100px; }
+.trivia-container { background: #161c23; width: min(680px, calc(100% - 40px)); height: min(620px, 80%); box-shadow: 0 16px 70px #000c; }
+.trivia-header h2 { font-size: 22px; }
+.trivia-content a { color: #9ed9ed; }
+.trivia-navigation { flex-wrap: wrap; }
+#arabic-visualization-container { left: 330px; right: 24px; bottom: 85px; width: auto; transform: none; z-index: 205; }
+#volume-display-panel { top: 110px; left: auto; right: 24px; z-index: 220; }
+#score-panel { z-index: 220; top: 100px; bottom: 48px; height: auto; width: min(400px, calc(100% - 340px)); }
+@media (max-width: 700px) {
+    #title-container { top: 14px; left: 16px; right: 16px; }
+    #title-content h1 { font-size: 19px; margin-bottom: 4px; }
+    #title-content .description { font-size: 12px; }
+    #control-panel { top: auto; left: 10px; right: 10px; bottom: 42px; width: auto; height: 37%; padding: 12px; gap: 10px; }
+    .mode-engineer .topdown-view.expanded { top: 82px; left: 10px; right: 10px; bottom: calc(37% + 92px); }
+    #map-legend { left: 14px; right: 14px; bottom: calc(37% + 49px); font-size: 10px; }
+    .mode-audience .topdown-view { top: 80px; bottom: auto; right: 12px; width: 130px; height: 130px; }
+    #joystick-container { top: 110px; left: 20px; right: auto; bottom: auto; width: 90px; height: 90px; }
+    #score-panel { top: 76px; left: 10px; right: 10px; width: auto; bottom: 45px; }
+    #arabic-visualization-container { left: 10px; right: 10px; bottom: calc(37% + 55px); }
+    .trivia-container { top: 47%; width: calc(100% - 24px); height: 78%; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; }
+}
+
+@media (min-width: 1100px) {
+    .mode-engineer.score-open .topdown-view.expanded { right: 440px; }
+    .mode-engineer.score-open #map-legend { right: 440px; }
+}

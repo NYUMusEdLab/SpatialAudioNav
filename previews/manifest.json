@@ -1,0 +1,14 @@
+{
+  "original_commit": "f4e7352db44d7d16d42339dc0199492fabca0cd7",
+  "previews": {
+    "01-playback": {
+      "source_commit": "b580d82d4a9e91c76e1709f28ca409938af364f7",
+      "tree": "c05dc6c5d6feeccf1557d09cdf861041d25648ba"
+    },
+    "02-engineer": {
+      "source_commit": "df652f9e3df012c9b74fc2c78d5b2a72bc39b593",
+      "tree": "5d07651e1bf3b8a026efc70c5b195130359af1ec"
+    }
+  },
+  "generated_date": "2026-10-06"
+}

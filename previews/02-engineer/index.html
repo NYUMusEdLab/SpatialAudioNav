@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dialogue de l’ombre double — Spatial listening</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.10.0/dist/nipplejs.min.js"></script>
+
+</head>
+<body class="mode-audience">
+    <!-- Static Star Wars Style Title -->
+    <div id="title-container">
+        <div id="title-content">
+            <h1>Dialogue de l'ombre double</h1>
+            <p class="description">
+                <!-- EDIT THIS PARAGRAPH: Add a short description of the project or piece here. -->
+                Listen, move, and shape sound as the audio engineer.
+            </p>
+            <p class="attributions">
+                <!-- EDIT ATTRIBUTIONS: Add credits, acknowledgements, or other attributions here. -->
+               <!--  Developed by James Chang | Foundation provided by Professor Ruthmann -->
+            </p>
+        </div>
+    </div>
+
+    <div id="immersive-container">
+        <div id="scene-container"></div>
+        <div id="joystick-container"></div>
+        
+        <aside id="control-panel" aria-label="Listening controls">
+        <!-- Mode Selection UI -->
+        <div class="mode-selector">
+            <div class="mode-label">Mode:</div>
+            <div class="mode-options">
+                <button class="mode-btn" data-mode="engineer">Audio Engineer</button>
+                <button class="mode-btn active" data-mode="audience">Audience</button>
+            </div>
+        </div>
+
+        <!-- Performer Speaker Selection Dropdown -->
+        <div id="performer-dropdown-container" class="performer-dropdown">
+            <label for="performer-speaker-select">Current Location:</label>
+            <select id="performer-speaker-select">
+            <option value="8">Audience Center</option>
+            <option value="performer_perspective">Performer Perspective</option>
+            <option value="0">Speaker 1 (Left Front)</option>
+            <option value="1">Speaker 2 (Right Front)</option>
+            <option value="2">Speaker 3 (Right)</option>
+            <option value="3">Speaker 4 (Right Back)</option>
+            <option value="4">Speaker 5 (Left Back)</option>
+            <option value="5">Speaker 6 (Left)</option>
+            </select>
+        </div>
+        
+        <!-- Scene Selection -->
+        <div class="scene-selector">
+            <button class="scene-btn active" data-scene="default">Sigle Initial</button>
+            <button class="scene-btn" data-scene="transition1-2">Transition 1-2</button>
+            <button class="scene-btn" data-scene="transition3-4">Transition 3-4</button>
+            <button class="scene-btn" data-scene="stropheV">Strophe V</button>
+        </div>
+
+        <section id="engineer-controls" aria-label="Engineer mixing">
+            <div class="mix-choice">
+                <button data-engineer-control="reference" aria-pressed="true">Listen to example</button>
+                <button data-engineer-control="manual" aria-pressed="false">Mix yourself</button>
+            </div>
+            <p id="mix-help"></p>
+            <div id="speaker-controls" aria-label="Speaker switches">
+                <button class="speaker-trigger" aria-label="Speaker 1" aria-pressed="false">1</button>
+                <button class="speaker-trigger" aria-label="Speaker 2" aria-pressed="false">2</button>
+                <button class="speaker-trigger" aria-label="Speaker 3" aria-pressed="false">3</button>
+                <button class="speaker-trigger" aria-label="Speaker 4" aria-pressed="false">4</button>
+                <button class="speaker-trigger" aria-label="Speaker 5" aria-pressed="false">5</button>
+                <button class="speaker-trigger" aria-label="Speaker 6" aria-pressed="false">6</button>
+            </div>
+        </section>
+        <!-- Move the toggleArabicBtn here, before .topdown-view -->
+        <button id="toggleArabicBtn" title="Toggle Arabic Visualization">Audio Visualization</button>
+        
+        <!-- Add Volume Display Toggle Button -->
+        <button id="volumeDisplayBtn" title="Toggle Volume Display" style="display: none;">Volume Visualization</button>
+        
+        <!-- Score Display Toggle Button -->
+        <button id="scoreDisplayBtn" title="Toggle Musical Score" style="display: none;">Musical Score</button>
+        
+        <!-- Dry/Wet Control for Strophe V -->
+        <div id="dryWetControl" style="display: none;">
+            <label class="control-label" for="dryWetSlider">Piano resonance level</label>
+            <div class="slider-container">
+                <input type="range" id="dryWetSlider" min="0" max="100" value="0" class="dry-wet-slider">
+                <div class="slider-labels">
+                    <span>None</span>
+                    <span>Full</span>
+                </div>
+            </div>
+            <div class="control-value" id="dryWetValue">0%</div>
+        </div>
+        
+        <div class="audio-controls">
+            <button aria-label="Play audio" id="playPauseButton" data-playing="false" title="Play/Pause Audio"></button>
+            <button aria-label="Reset to beginning" id="resetButton" title="Reset to Beginning"></button>
+        </div>
+        
+        <!-- Trivia Button -->
+        <button id="triviaButton" title="Information and listening guide" aria-label="Information and listening guide" aria-controls="information-panel" aria-expanded="false">Information &amp; listening guide</button>
+        <p class="audience-help">Move with W A S D; turn with J / L, drag, or the joystick. Use headphones for the spatial effect.</p>
+        </aside>
+        <div class="topdown-view">
+            <canvas id="topdown-canvas" aria-label="Spatial map of six speakers, the performer, and the audio engineer"></canvas>
+        </div>
+        <p id="map-legend"></p>
+
+        
+        <!-- Trivia Pop-up Container -->
+        <section id="information-panel" class="trivia-container" role="dialog" aria-labelledby="information-title" hidden>
+            <div class="trivia-header">
+                <h2 id="information-title">Listening guide</h2>
+                <button class="close-trivia" aria-label="Close information">&times;</button>
+            </div>
+            <div class="trivia-content">
+                <!-- Trivia content will be loaded dynamically -->
+            </div>
+            <div class="trivia-navigation">
+                <button class="trivia-nav" data-section="composer">Composer</button>
+                <button class="trivia-nav" data-section="piece">The Piece</button>
+                <button class="trivia-nav" data-section="technique">Technique</button>
+                <button class="trivia-nav" data-section="history">History</button>
+            </div>
+        </section>
+
+        <!-- Arabic Visualization Container -->
+        <div id="arabic-visualization-container" style="display: none;">
+            <img id="arabic-visualization-image" src="images/ArabicVisualization.png" alt="Arabic Music Visualization">
+            <div id="arabic-playhead"></div>
+        </div>
+
+        <!-- Volume Display Panel -->
+        <div id="volume-display-panel" style="display: none;">
+            <div class="volume-panel-header">
+                <h3>Speaker Volumes</h3>
+                <button id="closeVolumePanel" aria-label="Close speaker volumes" class="close-panel">&times;</button>
+            </div>
+            <div class="volume-bars-container">
+                <div class="volume-bar-group" data-speaker="0">
+                    <div class="speaker-label">Speaker 1</div>
+                    <div class="volume-bar-wrapper">
+                        <div class="volume-bar">
+                            <div class="volume-fill"></div>
+                        </div>
+                        <div class="volume-percentage">50%</div>
+                    </div>
+                </div>
+                <div class="volume-bar-group" data-speaker="1">
+                    <div class="speaker-label">Speaker 2</div>
+                    <div class="volume-bar-wrapper">
+                        <div class="volume-bar">
+                            <div class="volume-fill"></div>
+                        </div>
+                        <div class="volume-percentage">50%</div>
+                    </div>
+                </div>
+                <div class="volume-bar-group" data-speaker="2">
+                    <div class="speaker-label">Speaker 3</div>
+                    <div class="volume-bar-wrapper">
+                        <div class="volume-bar">
+                            <div class="volume-fill"></div>
+                        </div>
+                        <div class="volume-percentage">50%</div>
+                    </div>
+                </div>
+                <div class="volume-bar-group" data-speaker="3">
+                    <div class="speaker-label">Speaker 4</div>
+                    <div class="volume-bar-wrapper">
+                        <div class="volume-bar">
+                            <div class="volume-fill"></div>
+                        </div>
+                        <div class="volume-percentage">50%</div>
+                    </div>
+                </div>
+                <div class="volume-bar-group" data-speaker="4">
+                    <div class="speaker-label">Speaker 5</div>
+                    <div class="volume-bar-wrapper">
+                        <div class="volume-bar">
+                            <div class="volume-fill"></div>
+                        </div>
+                        <div class="volume-percentage">50%</div>
+                    </div>
+                </div>
+                <div class="volume-bar-group" data-speaker="5">
+                    <div class="speaker-label">Speaker 6</div>
+                    <div class="volume-bar-wrapper">
+                        <div class="volume-bar">
+                            <div class="volume-fill"></div>
+                        </div>
+                        <div class="volume-percentage">50%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Score Panel for Audio Engineer -->
+        <div id="score-panel" style="display: none;">
+            <div class="score-panel-header">
+                <h3>Musical Score</h3>
+                <button id="closeScorePanel" aria-label="Close score" class="close-panel">&times;</button>
+            </div>
+            <div class="score-content">
+                <div class="score-image-container">
+                    <img id="score-image" src="" alt="Musical Score" />
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Audio elements -->
+    <audio id="double" src="audio/double-clarinet-si.mp3" preload="auto" crossorigin="anonymous"></audio>
+    <audio id="transition1-2" src="audio/transition12.mp3" preload="auto" crossorigin="anonymous"></audio>
+    <audio id="transition3-4" src="audio/transition34.mp3" preload="auto" crossorigin="anonymous"></audio>
+    <audio id="stropheV" src="audio/strophe5dry.mp3" preload="auto" crossorigin="anonymous"></audio>
+    <audio id="stropheV-wet" src="audio/strophe5wet.mp3" preload="auto" crossorigin="anonymous"></audio>
+    
+    <script type="module" src="js/3DVisualization.js"></script>
+    <script src="js/TriviaSections.js"></script>
+    <!-- <script src="js/modeController.js"></script> -->
+    <script src="script.js"></script>
+<nav aria-label="Preview navigation" style="position:fixed;bottom:0;left:0;right:0;z-index:10000;min-height:36px;padding:9px 12px;box-sizing:border-box;background:#13202c;color:#e5ebf0;font:12px system-ui;text-align:center;border-top:1px solid #47586a">Preview 02 · Engineer · <a href="../" style="color:#b8e6f5">Compare previews</a> · <a href="../../" style="color:#b8e6f5">Preserved original</a></nav>
+</body>
+</html>
