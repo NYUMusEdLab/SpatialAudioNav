@@ -1,8 +1,8 @@
 # Initial release plan
 
-Scope: publish the four existing Boulez scenes with audience and audio engineer modes. Spatial Atelier/composer (PR #25) is deferred. Evaluate any useful layout changes separately rather than merging the whole PR.
+Scope: develop **Listen → Explore → Mix**, beginning with one complete passage (Transition I–II), then expand to the four existing Boulez scenes. Spatial Atelier/composer (PR #25) is deferred.
 
-Design priority: let learners experience the audio engineer's musical decisions, supported by audience movement and the performer listening perspective. Keep the current two-mode interface; the performer perspective remains available within Audience. See [the Boulez context review](docs/BOULEZ_CONTEXT_REVIEW.md) for accepted suggestions, rejected implementations, and source checks.
+Design priority: progressive participation. Listen requires only Play and makes the example mix and source roles legible. Explore adds listening positions and optional movement without changing playback. Mix gives the learner responsibility for spatialization, with equal access through a sound timeline or the full musical score. The owner approved this direction on 6 October 2026. This supersedes the earlier two-mode recommendation; the original and Previews 01/02 remain frozen. See [the Boulez context review](docs/BOULEZ_CONTEXT_REVIEW.md) for prior development context.
 
 ## Preserved online baseline
 
@@ -33,8 +33,8 @@ The original site at https://nyumusedlab.github.io/SpatialAudioNav/ preserves ev
 
 - Make the title dismissible and remove dated draft labels.
 - Make the information button open and close the same panel; fade the title while it is open, restore it on close, and respect reduced-motion preferences.
-- Use mode classes to control layout consistently, retaining the two existing modes.
-- Keep the engineer 3D toggle visibly disabled as requested; preserve the current hidden engineer 3D display unless a different display policy is chosen.
+- Use separate Listen, Explore, and Mix presentations sharing one playback and cue state. Validate one passage before migrating other scenes.
+- Keep free movement in Explore. Mix prioritizes a score or sound timeline and performance controls. The previous engineer 3D policy remains only in Preview 02.
 - Label the red ring Performer and the white ring Audio Engineer; enlarge the performer ring for readability, with matching 2D/3D positions and no extra floating label panels.
 - Arrange controls and scores for desktop and phone widths without overlap.
 - Explain audience movement and engineer mixing controls in the interface.
@@ -79,3 +79,13 @@ The existing live site loads and starts playback; mode and scene switching respo
 Implemented explicit example/manual ownership for the engineer mix; clickable speaker switches; focus-loss key cleanup and focused-control guards; one responsive control column; a shared information toggle, close, and Escape action; title fade; visible disabled engineer 3D toggle; in-ring role labels; optional score panel; and short scene activities with stated model limitations. The obsolete AudioVisualizer script is no longer loaded. Scores still scroll approximately by elapsed duration. Phone controls use a scrollable panel.
 
 Local checks covered desktop and 390 px layout, scene switching, playback controls, manual Transition III–IV control, Strophe V slider/reset, and information closure. This is a preview smoke check; full listening, cue accuracy, sustained track alignment, assistive-technology testing, and Safari/Firefox/device checks remain release gates. The five placeholder wall panels and final credits/permissions still need work.
+
+## Preview 03 implementation status — 6 October 2026
+
+A separate `participation.html` entry implements the accepted three-experience design for Transition I–II. It does not rewrite the earlier app. Listen defaults to the example, with a six-speaker map, actual signal-responsive lights, and a recorded-shadow label. Explore changes listener position or allows optional 3D movement. Mix starts from the surrounding background and provides held or latched keyboard/touch controls, a cue timeline, and the full score with manual zoom/scroll. All experiences use one media clock; view/position changes preserve playback time.
+
+The cue guide remains provisional. The recording reports approximately 76 seconds; the inherited final distinct foreground change is at 56.151 seconds, held to the end. Verify whether this is intended, a different recording, or an incomplete cue map before changing it. The score is not claimed to be synchronized. Speaker light measures signal after the mix gain; rings show routing and remain visible when paused.
+
+Next: review this passage by listening, verify its recording and cue/score correspondence, then apply the approved interaction pattern to the remaining excerpts. The strongest test is whether a newcomer can hear the gesture, locate it, compare positions, and deliberately perform the foreground changes without reading notation.
+
+Automated checks cover cue boundaries, reference-data parity, manual ownership, independent simultaneous inputs, hold/latch behavior, focus-reset primitives, position bounds, and cancellation/replay. Desktop and 390 px browser checks cover layouts, playback continuity, score loading, keyboard/latch controls, and 3D. Physical multi-touch, auditory localization, musical accuracy, and other browsers remain unverified.

@@ -12,26 +12,37 @@ def git(*args):
     return subprocess.check_output(['git', *args], text=True)
 
 
-def snapshot(ref, label):
+def snapshot(ref, label, participation=False):
+    runtime = {'participation.html', 'participation.css', 'js', 'audio', 'images', 'favicon.ico'} if participation else RUNTIME
+    entrypoint = 'participation.html' if participation else 'index.html'
     entries = []
     for entry in git('ls-tree', ref).splitlines():
         info, path = entry.split('\t', 1)
         mode, kind, sha = info.split()
-        if path in RUNTIME:
+        if path in runtime:
             entries.append(dict(path=path, mode=mode, type=kind, sha=sha))
-    assert {entry['path'] for entry in entries} == RUNTIME, 'Missing runtime asset'
-    html = git('show', f'{ref}:index.html')
+    assert {entry['path'] for entry in entries} == runtime, 'Missing runtime asset'
+    html = git('show', f'{ref}:{entrypoint}')
     banner = '''<nav aria-label="Preview navigation" style="position:fixed;bottom:0;left:0;right:0;z-index:10000;min-height:36px;padding:9px 12px;box-sizing:border-box;background:#13202c;color:#e5ebf0;font:12px system-ui;text-align:center;border-top:1px solid #47586a">LABEL · <a href="../" style="color:#b8e6f5">Compare previews</a> · <a href="../../" style="color:#b8e6f5">Preserved original</a></nav>'''.replace('LABEL', label)
     assert '</body>' in html
-    index = next(entry for entry in entries if entry['path'] == 'index.html')
+    index = next(entry for entry in entries if entry['path'] == entrypoint)
+    index['path'] = 'index.html'
     index.pop('sha')
     index['content'] = html.replace('</body>', banner + '\n</body>')
     return entries
 
 
 if __name__ == '__main__':
+    if len(sys.argv) == 3 and sys.argv[1] == '--participation':
+        ref = sys.argv[2]
+        print(json.dumps({
+            '03-listen-explore-mix': snapshot(ref, 'Preview 03', participation=True),
+            'index.html': Path(__file__).with_name('preview-index.html').read_text(),
+            'source_trees': {'03-listen-explore-mix': git('rev-parse', f'{ref}^{{tree}}').strip()},
+        }))
+        raise SystemExit(0)
     if len(sys.argv) != 3:
-        raise SystemExit('Usage: build-preview-payload.py PLAYBACK_REF ENGINEER_REF')
+        raise SystemExit('Usage: build-preview-payload.py PLAYBACK_REF ENGINEER_REF | --participation SOURCE_REF')
     playback, engineer = sys.argv[1:]
     print(json.dumps({
         '01-playback': snapshot(playback, 'Preview 01 · Playback'),

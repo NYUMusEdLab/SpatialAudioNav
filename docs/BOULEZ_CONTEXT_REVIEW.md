@@ -71,3 +71,7 @@ Defer composer/authoring, WebXR, multi-user avatars, arbitrary speaker layouts, 
 ## Review limits
 
 This review compares seven project discussions, including earlier research rationale and explicit user corrections, with current source code and primary IRCAM documentation. Historical pasted code and assistant proposals are not proof of deployed behavior. Referenced scholarly PDFs, private correspondence, and recording rights have not received a complete source/permissions audit here. No runtime audio or interface change is made by this review document.
+
+## Subsequent owner direction — 6 October 2026
+
+The owner clarified progressive participation: passive observation/listening, changing listening perspective, and performing the engineer’s mix. The accepted Preview 03 implements Listen / Explore / Mix for Transition I–II, with notation optional through equal score and sound-timeline views. This supersedes the earlier recommendation to retain only the two existing modes for future development. The original and Previews 01/02 preserve that earlier interface. Composer remains deferred. The historical/contextual findings above continue to inform the content and musical verification work.
