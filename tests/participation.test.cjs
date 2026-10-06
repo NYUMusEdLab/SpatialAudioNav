@@ -118,7 +118,7 @@ test('audio scheduling retains release events and cancels them on manual takeove
     }}}));
     const session = new C.Session();
     const ctx = {C,session,channels,context:{currentTime:100},audio:{currentTime:8,playbackRate:1,paused:false,ended:false},
-        document:{querySelectorAll:()=>[]},automationMode:'',plannedGains:[]};
+        document:{querySelectorAll:()=>[]},$:()=>({textContent:''}),automationMode:'',plannedGains:[]};
     vm.createContext(ctx);
     vm.runInContext(source.slice(source.indexOf('    function scheduleExample()'),source.indexOf('    function updateListener')),ctx);
     ctx.applyMix(true);
@@ -128,6 +128,16 @@ test('audio scheduling retains release events and cancels them on manual takeove
     session.setMode('mix');session.press('key:2',2);ctx.applyMix();
     calls.forEach(events => assert.deepEqual(events[0],['cancel',100]));
     assert.equal(calls[1].at(-1)[1],1);assert.equal(calls[5].at(-1)[1],0.5);
+    calls.forEach(events => events.length=0);
+    session.release('key:2');ctx.applyMix();
+    assert.equal(calls[1].at(-1)[1],0.5);
+    assert.equal(calls[1].at(-1)[3],C.release);
+    calls.forEach(events => events.length=0);
+    ctx.audio.currentTime=16.9;ctx.applyMix(true);
+    calls.forEach(events => {
+        assert.equal(events.filter(c=>c[0]==='target').length,1);
+        assert.equal(events.at(-1)[1],0.5,'no-input Mix never follows an example accent');
+    });
     calls.forEach(events => events.length=0);
     session.setMode('listen');ctx.audio.currentTime=8.9;ctx.audio.paused=true;ctx.applyMix(true);
     calls.forEach(events => assert.equal(events.filter(c=>c[0]==='target').length,0));
@@ -155,4 +165,18 @@ test('tap-to-move clamps position, preserves heading and mix, and marks a custom
     s.moveTo(NaN,0);assert.ok(Number.isFinite(s.pose.x));
     s.free=false;const pose={...s.pose};s.moveTo(0,0);assert.deepEqual(s.pose,pose);
     s.setPosition('audience');assert.equal(s.customPosition,false);assert.equal(s.pose.z,2);
+});
+
+
+test('shared speaker circles distinguish background, accents, and paused sound', () => {
+    const quiet = C.speakerFeedback(0.01,0.01,true);
+    const loud = C.speakerFeedback(0.04,0.04,true);
+    const accent = C.speakerFeedback(0.08,0.04,true);
+    assert.ok(loud.radius > quiet.radius && loud.opacity > quiet.opacity);
+    assert.equal(quiet.accent,0);assert.equal(loud.accent,0);
+    assert.ok(accent.radius > loud.radius && accent.accent > 0);
+    assert.ok(accent.accentRadius > accent.radius);
+    const paused = C.speakerFeedback(0.08,0.04,false);
+    assert.equal(paused.level,0);assert.equal(paused.opacity,0);assert.equal(paused.accent,0);
+    assert.deepEqual(C.speakerFeedback(0,0,true),paused);
 });

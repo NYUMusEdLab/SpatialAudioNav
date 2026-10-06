@@ -96,3 +96,15 @@ body.free-roam .walk-controls button{width:50px;min-width:44px;height:48px;paddi
 
 .room-speaker-chip{position:absolute;transform:translate(-50%,-50%);pointer-events:none;width:25px;height:25px;display:grid;place-items:center;border:1px solid #637785;border-radius:50%;background:#17242ee8;color:#f2f5f7;font-size:14px;line-height:1}
 .room-speaker-chip.accent{background:#e9b572;color:#17212a;border-color:#ffdbac;box-shadow:0 0 12px #f2bc7370}
+
+/* One measured volume/accent pair follows each speaker in either room camera. */
+.room-speaker-chip{isolation:isolate}
+.room-speaker-chip::before,.room-speaker-chip::after{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;z-index:-1}
+.room-speaker-chip::before{width:var(--volume-size,34px);height:var(--volume-size,34px);background:#c0c7cd4d;border:1px solid #d2d8dd8c;opacity:var(--volume-opacity,0)}
+.room-speaker-chip::after{width:var(--accent-size,40px);height:var(--accent-size,40px);background:#f2bc7338;border:2px solid #f2bc73;opacity:var(--accent-opacity,0)}
+.room-instructions .room-sound-key{display:block;color:#d4dbe1;margin-top:3px}
+.mix-status{font-size:12px;color:var(--gold);margin:7px 0 0;line-height:1.4}
+body[data-experience=mix]{padding-bottom:365px}
+@media(max-width:650px){body[data-experience=mix]{padding-bottom:410px}}
+
+.performance-controls .small-note{line-height:1.45}

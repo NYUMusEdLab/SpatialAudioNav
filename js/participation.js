@@ -1,4 +1,4 @@
-/* Preview 05: a single-excerpt study with one shared media clock. */
+/* Preview 06: a single-excerpt study with one shared media clock. */
 (() => {
     'use strict';
     const C = window.ParticipationCore;
@@ -16,6 +16,7 @@
     let backgroundRms = 0;
     const accentLights = Array(6).fill(0);
     const rms = Array(6).fill(0);
+    const feedback = Array.from({length:6}, () => C.speakerFeedback(0, 0, false));
     const formatTime = value => Number.isFinite(value) ? `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, '0')}` : '—';
     const cueName = cue => cue?.speaker ? `Speaker ${cue.speaker} accent` : 'Surrounding background';
 
@@ -76,8 +77,10 @@
         plannedGains = values;
         document.querySelectorAll('.speaker-pad').forEach((pad, i) => {
             pad.setAttribute('aria-pressed', String(session.selected().has(i + 1)));
-            pad.querySelector('output').textContent = `${Math.round(values[i] * 100)}%`;
+            pad.querySelector('output').textContent = values[i] > 0.5 ? 'Boosted' : 'Background';
         });
+        const selected = [...session.selected()].sort();
+        $('mix-status').textContent = selected.length ? `${session.inputStyle === 'latch' ? 'Boost latched' : 'Boost held'}: ${selected.map(n => `speaker ${n}`).join(', ')}` : 'Background only · no speakers boosted';
     }
     function updateListener(force = false) {
         const p = session.pose, signature = [p.x, p.y, p.z, p.yaw].join(',');
@@ -104,11 +107,11 @@
         $('prompt-kicker').textContent = session.mode === 'explore' ? 'Change your perspective' : 'Listen for';
         $('prompt-title').textContent = session.mode === 'explore' ? 'The same music, another place' : 'A gesture comes forward';
         $('prompt-text').textContent = session.mode === 'explore' ? 'Compare the audience, clarinetist, and engineer positions without restarting. You can also move through the room.' : 'Hear the sound surrounding you, then notice a brief louder gesture at one speaker, followed by a return to the surrounding sound.';
-        $('map-legend').textContent = mixing ? (guide ? 'Amber pulse: sound above the surrounding bed · white outline: selected pad · dashed blue: example accent' : 'Amber pulse: sound above the surrounding bed · white outline: selected pad') : 'The blue circle follows the surrounding sound. Amber pulses show brief accents above it.';
+        $('map-legend').textContent = mixing ? (guide ? 'Grey: speaker volume · amber: accent · white outline: selected pad · dashed blue: example cue' : 'Grey: speaker volume · amber: accent · white outline: selected pad') : 'Grey circles follow each speaker’s sound. Amber pulses show accents above the surrounding background.';
         $('timeline-view').hidden = view !== 'timeline'; $('score-view').hidden = view !== 'score';
         $('cue-strip').hidden = !guide; $('music-workspace').classList.toggle('guide-hidden', !guide);
         document.querySelectorAll('[data-view]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.view === view)));
-        $('input-help').textContent = session.inputStyle === 'hold' ? 'Hold keys 1–6 or touch pads to bring speakers forward. Release to return to the surrounding background.' : 'Tap a pad or press a key once to keep a speaker forward; press again to release. Release all returns to background.';
+        $('input-help').textContent = session.inputStyle === 'hold' ? 'Hold 1–6 or a pad to boost. Release to fade back; the background keeps playing.' : 'Tap keys 1–6 or pads to latch a boost. Tap again or Release all to return to background.';
         updateListener(); applyMix(); requestRender();
     }
     function renderTransport() {
@@ -134,7 +137,7 @@
         C.speakers.forEach(s => {
             const pad = document.createElement('button'); pad.className = 'speaker-pad'; pad.dataset.speaker = s.id;
             pad.setAttribute('aria-label', `Speaker ${s.id}`); pad.setAttribute('aria-pressed', 'false');
-            pad.innerHTML = `<strong>${s.id}</strong><output>50%</output><span class="meter" aria-hidden="true"></span>`;
+            pad.innerHTML = `<strong>${s.id}</strong><output>Background</output><span class="meter" aria-hidden="true"></span>`;
             pad.addEventListener('pointerdown', e => { if (e.button !== 0) return; e.preventDefault(); pad.focus({ preventScroll: true }); pad.setPointerCapture(e.pointerId); session.press(`pointer:${e.pointerId}`, s.id); applyMix(); requestRender(); });
             const release = e => { session.release(`pointer:${e.pointerId}`); applyMix(); requestRender(); };
             ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(name => pad.addEventListener(name, release));
@@ -177,14 +180,19 @@
         draw.strokeStyle = `rgba(144,217,239,${0.18 + bedLight * 0.55})`; draw.lineWidth = 1 + bedLight * 3; draw.beginPath(); draw.arc(cx, cy, 7 * scale, 0, Math.PI * 2); draw.stroke();
         const current = C.cueAt(audio.currentTime).current;
         C.speakers.forEach((s, i) => {
-            const [x, y] = pos(s), light = accentLights[i];
-            draw.fillStyle = `rgba(100,159,178,${0.22 + bedLight * 0.35})`;
+            const [x, y] = pos(s), meter = feedback[i], light = meter.accent;
+            if (meter.level > 0) {
+                draw.fillStyle = `rgba(192,199,205,${meter.opacity * 0.3})`;
+                draw.strokeStyle = `rgba(210,216,221,${meter.opacity * 0.55})`; draw.lineWidth = 1;
+                draw.beginPath(); draw.arc(x, y, meter.radius, 0, Math.PI * 2); draw.fill(); draw.stroke();
+            }
+            draw.fillStyle = '#263744';
             draw.beginPath(); draw.arc(x, y, 17, 0, Math.PI * 2); draw.fill();
             if (light > 0) {
                 draw.fillStyle = `rgba(242,188,115,${light * 0.45})`;
-                draw.beginPath(); draw.arc(x, y, 19 + light * 24, 0, Math.PI * 2); draw.fill();
+                draw.beginPath(); draw.arc(x, y, meter.accentRadius, 0, Math.PI * 2); draw.fill();
                 draw.strokeStyle = `rgba(242,188,115,${light})`; draw.lineWidth = 1 + light * 4;
-                draw.beginPath(); draw.arc(x, y, 18 + light * 12, 0, Math.PI * 2); draw.stroke();
+                draw.beginPath(); draw.arc(x, y, meter.accentRadius, 0, Math.PI * 2); draw.stroke();
             }
             if (session.mode === 'mix' && session.selected().has(s.id)) {
                 draw.strokeStyle = '#d8e2e8'; draw.lineWidth = 1;
@@ -261,7 +269,13 @@
             const screen = point.clone().project(activeCamera);
             chip.hidden = Math.abs(screen.x) > 0.94 || Math.abs(screen.y) > 0.94 || screen.z < -1 || screen.z > 1;
             chip.style.left = `${(screen.x + 1) / 2 * w}px`; chip.style.top = `${(1 - screen.y) / 2 * h}px`;
-            chip.classList.toggle('accent', accentLights[i] > 0.15);
+            const meter = feedback[i];
+            chip.style.setProperty('--volume-size', `${meter.radius * 2}px`);
+            chip.style.setProperty('--volume-opacity', meter.opacity.toFixed(3));
+            chip.style.setProperty('--accent-size', `${meter.accentRadius * 2}px`);
+            chip.style.setProperty('--accent-opacity', meter.accent.toFixed(3));
+            chip.dataset.level = meter.level.toFixed(3);
+            chip.classList.toggle('accent', meter.accent > 0.15);
         });
         el.dataset.listener = [p.x, p.z, p.yaw].map(n => n.toFixed(2)).join(',');
     }
@@ -285,7 +299,7 @@
             sourceMeter.getFloatTimeDomainData(sourceSamples);
             backgroundRms = 0.5 * Math.sqrt(sourceSamples.reduce((sum, n) => sum + n * n, 0) / sourceSamples.length);
         } else { rms.fill(0); backgroundRms = 0; }
-        accentLights.forEach((_, i) => { accentLights[i] = active ? C.accentStrength(rms[i], backgroundRms) : 0; });
+        feedback.forEach((_, i) => { feedback[i] = C.speakerFeedback(rms[i], backgroundRms, active); accentLights[i] = feedback[i].accent; });
         $('source-dot').classList.toggle('sounding', active && rms.some(n => n > 0.002));
         const cue = C.cueAt(audio.currentTime);
         if (cue.index !== lastCue) { lastCue = cue.index; $('current-cue').textContent = cueName(cue.current); $('next-cue').textContent = cue.next ? (cue.next.releasedSpeaker ? 'Return to background' : cueName(cue.next)) : 'Background to the end'; }
@@ -299,6 +313,7 @@
         const summary = selected.length ? `accent at ${selected.join(', ')}` : returning.length && active ? `speaker ${returning.join(', ')} returning to background` : 'surrounding background';
         $('level-summary').textContent = `${active ? '' : 'Paused · '}${session.mode === 'mix' ? 'your mix' : 'example mix'} · ${summary}`;
         canvas.dataset.accentSpeakers = accentLights.map((n, i) => n > 0.08 ? i + 1 : null).filter(Boolean).join(',');
+        canvas.dataset.levels = feedback.map(meter => meter.level.toFixed(3)).join(',');
         paintMap(); paintRoom(); renderTransport();
         if (active || (session.free && walking.size)) requestRender();
     }
@@ -321,7 +336,9 @@
     $('seek').addEventListener('input', () => { if (Number.isFinite(audio.duration)) audio.currentTime = Math.min(audio.duration, Math.max(0, Number($('seek').value))); applyMix(true); requestRender(); });
     $('volume').addEventListener('input', () => { if (master) master.gain.setTargetAtTime(Number($('volume').value) / 300, context.currentTime, 0.03); });
     $('score-zoom').addEventListener('input', () => { $('full-score').style.width = `${$('score-zoom').value}%`; $('score-zoom-value').textContent = `${$('score-zoom').value}%`; });
-    function editing(event) { return event.ctrlKey || event.metaKey || event.altKey || Boolean(event.target.closest('input,select,textarea,[contenteditable="true"],summary')); }
+    // Range controls keep their native arrow keys, but do not swallow speaker
+    // number shortcuts after the listener seeks or adjusts volume/score zoom.
+    function editing(event) { return event.ctrlKey || event.metaKey || event.altKey || Boolean(event.target.closest('input:not([type="range"]),select,textarea,[contenteditable="true"],summary')); }
     document.addEventListener('keydown', event => {
         if (event.key === 'Escape' && session.free) { event.preventDefault(); closeRoom(); return; }
         if (editing(event)) return;

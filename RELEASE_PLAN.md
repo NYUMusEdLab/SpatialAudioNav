@@ -107,3 +107,12 @@ The prior renderer updated drawing-buffer dimensions with `setSize(..., false)` 
 Opening 3D now dedicates the available screen to the room, with transport and Back retained. Whole room fits the speaker ring in portrait and landscape, shows the listener and heading, and supports tapping the floor to move. Dragging this overview rotates the camera without moving or turning the audio listener. Eye level follows the listener, with drag-to-turn and a wider portrait field of view. Hold buttons and keyboard movement remain available. Reset restores the audience position/whole-room view. Custom positions persist when returning to Explore and are not mislabeled as presets.
 
 The musical and gain automation is unchanged from Preview 04. Focus/held-input cleanup, view switching during playback, viewport changes, tap bounds, and camera framing are checked. Physical-phone touch and Safari testing remain release verification work. All earlier numbered previews and the original are preserved.
+
+
+## Preview 06 — shared sound feedback and clearer mixing, 6 October 2026
+
+Grey circles now use one measured per-speaker volume mapping across the map, Whole room, and Eye level. Separate amber pulses represent signal above the surrounding bed. Both extinguish when paused. The circles use screen-pixel sizes so perspective does not imply a change in speaker output; listener movement still changes spatial audio.
+
+Mix retains the established 0.5 background / 1 foreground gain. With no input, it does not follow automatic cues. Pads now read Background or Boosted, and a status distinguishes background-only, held boosts, and latched boosts. The guide is labeled visual; the recording’s own dynamics remain audible without input. Number-key shortcuts now work when a playback, volume, or score-zoom slider has focus, while preserving text/select input and range arrow keys.
+
+The live browser meters confirmed speaker 3 had twice the signal of the five background channels during a manual boost (16.578% versus 8.289% on the same meter scale). Automated checks cover scheduled-event cancellation, manual release, background-only playback through an example cue, and shared circle behavior; all 29 checks pass. Phone-layout checks cover both 3D views, paused circles, manual pad/keyboard selection, and range-focus shortcuts. These checks establish signal changes, not perceived spatial strength on the owner’s headphones; auditory localization and physical-device testing remain release work. Earlier previews and the original are preserved.

@@ -54,6 +54,15 @@
     function accentStrength(signal, background) {
         return Math.min(1, Math.sqrt(Math.max(0, signal - background - 0.0005) * 12));
     }
+    // Shared visual meter for the map and both room cameras. This is measured
+    // output at the speaker, not a held selection or the listener's distance.
+    function speakerFeedback(signal, background, playing) {
+        const level = playing ? Math.min(1, Math.sqrt(Math.max(0, signal) * 12)) : 0;
+        const accent = playing ? accentStrength(signal, background) : 0;
+        const radius = 17 + level * 22;
+        return { level, radius, opacity: Math.min(1, level * 1.8), accent,
+            accentRadius: radius + 3 + accent * 10 };
+    }
     // Keep the entire speaker ring and its labels inside either screen orientation.
     function overviewBounds(aspect) {
         const ratio = Number.isFinite(aspect) && aspect > 0 ? aspect : 1;
@@ -130,5 +139,5 @@
             }
         }
     }
-    return { cues, accents, attack, release, speakers, positions, cueAt, referenceGains, referenceLevels, accentStrength, overviewBounds, eyeFov, Session, Playback };
+    return { cues, accents, attack, release, speakers, positions, cueAt, referenceGains, referenceLevels, accentStrength, speakerFeedback, overviewBounds, eyeFov, Session, Playback };
 });
