@@ -31,13 +31,13 @@
  * 4. STROPHE V:
  *    - 10 timing points from 0 to 9 seconds (simplified for demo)
  *    - Uses DRY/WET mixing between performer and hidden speaker
- *    - Automatic crossfading controlled in updateDryWetBalance() (line ~1080)
+ *    - Automatic resonance controlled in updateStropheVCrossfade() (line ~1080)
  *    - Timings: timestampPatterns.stropheV.timestamps (line ~150)
  * 
  * TIMING CONTROL FUNCTIONS:
  * - startPatternSwitching(): Main timing loop (50ms intervals)
  * - animateCircularPanning(): Controls rotation speed for transition3-4  
- * - updateDryWetBalance(): Controls crossfading for StropheV
+ * - updateStropheVCrossfade(): Controls resonance for StropheV
  * - setInitialSpeakerGains(): Sets starting conditions for each movement
  */
 
@@ -520,7 +520,7 @@ function setupResonator() {
     // STROPHE V INITIAL TIMING VALUES:
     // Initialize with performer fully audible and wet signal at 50%
     dryGain.gain.value = 1.0; // 100% dry (performer) - always audible
-    wetGain.gain.value = 0.5; // 50% wet at start - will increase over time via updateDryWetBalance()
+    wetGain.gain.value = 0.5; // 50% wet at start - controlled by updateStropheVCrossfade()
     
     // SPATIAL POSITIONING: Create a position for the hidden speaker BEHIND speakers 1 and 2, slightly elevated
     // Speakers 1 and 2 are at: 
@@ -754,7 +754,7 @@ function playStropheVSynchronized() {
         if (audioInitialized) {
             startPatternSwitching();
             startSpecialEffects();
-            startStropheVCrossfading();
+            updateStropheVCrossfade();
         }
     }).catch(error => {
         console.error("Error playing Strophe V synchronized audio:", error);
@@ -956,6 +956,7 @@ function handleSeek(event) {
 
     // Immediately update the playhead position
     updateArabicPlayhead();
+    if (currentScene === 'stropheV') updateStropheVCrossfade();
 
     // Always apply the pattern for the new time immediately after seeking
     // This ensures the visualization and audio spatialization update instantly.
@@ -1014,7 +1015,7 @@ function startPatternSwitching() {
         
         // Special handling for StropheV (dry/wet balance)
         if (currentScene === 'stropheV' && dryGain && wetGain) {
-            updateDryWetBalance(currentTime);
+            updateStropheVCrossfade();
         }
 
         // Update score scroll position if in engineer mode
@@ -1063,23 +1064,15 @@ function animateCircularPanning() {
     if (!circularPanner.active) return;
     
     const currentTime = currentAudioElement ? currentAudioElement.currentTime : 0;
-    const audioDuration = currentAudioElement ? currentAudioElement.duration || 10 : 10;
-    
-    // TIMING ACCELERATION ALGORITHM FOR TRANSITION 3-4
-    // Calculate acceleration factor based on time progression through the audio
-    // Start slow, gradually accelerate to maximum speed (5x faster by the end)
-    // This creates the effect where circular motion gets faster as the piece progresses
-    accelerationFactor = 1.0 + (currentTime / audioDuration) * 5.0;
-    
-    // Update the angle - ROTATION SPEED CONTROLLED HERE
-    // Base speed (0.5) * acceleration factor * frame rate multiplier (0.05)
-    circularPanner.angle += (circularPanner.speed * accelerationFactor) * 0.05;
-    
-    // Normalize the angle
-    if (circularPanner.angle > Math.PI * 2) {
-        circularPanner.angle -= Math.PI * 2;
-    }
-    
+    const audioDuration = currentAudioElement ? currentAudioElement.duration : NaN;
+    const duration = Number.isFinite(audioDuration) && audioDuration > 0 ? audioDuration : 10;
+
+    // Integrate the original 60fps speed against playback time. Seeking and
+    // replaying now produce the same angle on every display refresh rate.
+    accelerationFactor = 1.0 + (currentTime / duration) * 5.0;
+    circularPanner.angle = (circularPanner.speed * 3 *
+        (currentTime + 2.5 * currentTime * currentTime / duration)) % (Math.PI * 2);
+
     // Calculate gains for each speaker to create a moving sound
     if (gainNodes && gainNodes.length === 6) {
         const baseAngle = (Math.PI * 2) / 6; // Angle between speakers
@@ -1107,25 +1100,6 @@ function animateCircularPanning() {
     
     // Continue animation
     animationFrameId = requestAnimationFrame(animateCircularPanning);
-}
-
-// Update dry/wet balance for Strophe V
-// TIMING CONTROL: Automatic crossfading based on audio position
-function updateDryWetBalance(currentTime) {
-    if (!dryGain || !wetGain) return;
-    
-    // STROPHE V AUTOMATIC TIMING ALGORITHM  
-    // Calculate wet/dry balance based on time progression through audio
-    // Start dry (performer only), gradually increase wet signal (hidden speaker)
-    const audioDuration = currentAudioElement ? currentAudioElement.duration || 10 : 10;
-    // TIMING: Reach full wet signal at 70% through the audio duration
-    const wetAmount = Math.min(1.0, currentTime / (audioDuration * 0.7)); // Reach full wet at 70% of duration
-    
-    // CROSSFADE TIMING: Apply the calculated balance with smooth transitions
-    // Dry signal: starts at 100%, reduces to 20% (always keep some performer audible)
-    dryGain.gain.setTargetAtTime(1.0 - (wetAmount * 0.8), audioCtx.currentTime, 0.1); // Keep some dry signal
-    // Wet signal: starts at 0%, increases to 100% by 70% of audio duration  
-    wetGain.gain.setTargetAtTime(wetAmount, audioCtx.currentTime, 0.1);
 }
 
 // Apply a specific pattern
@@ -1348,6 +1322,7 @@ function setMode(mode) {
     
     // Toggle dry/wet control visibility
     toggleDryWetControlVisibility();
+    if (currentScene === 'stropheV') updateStropheVCrossfade();
     
     // Update score panel visibility based on mode
     updateScorePanelVisibility();
@@ -1852,17 +1827,9 @@ function resetEngineerSpeakerKeys() {
     }
 }
 
-// Function to start the automatic crossfading for Strophe V
-function startStropheVCrossfading() {
-    if (currentScene !== 'stropheV' || !isStropheVPlaying) return;
-    
-    // Start the crossfading animation
-    requestAnimationFrame(updateStropheVCrossfade);
-}
-
 // Function to update the automatic crossfade based on time
 function updateStropheVCrossfade() {
-    if (currentScene !== 'stropheV' || !isStropheVPlaying || !currentAudioElement || !dryGain || !wetGain) return;
+    if (currentScene !== 'stropheV' || !currentAudioElement || !dryGain || !wetGain) return;
     
     const currentTime = currentAudioElement.currentTime;
     
@@ -1915,10 +1882,6 @@ function updateStropheVCrossfade() {
         window.updateWetDryVisualization(1.0, finalWetAmount);
     }
 
-    // Continue the animation
-    if (isStropheVPlaying) {
-        requestAnimationFrame(updateStropheVCrossfade);
-    }
 }
 
 // Function to smoothly ramp between dry/wet values
@@ -1979,21 +1942,6 @@ window.addEventListener('keydown', (e) => {
     }
 });
 
-// Function to manually ramp the dry/wet amount
-function rampDryWetAmount(from, to, duration) {
-    if (!dryGain || !wetGain) return;
-    
-    const startTime = audioCtx.currentTime;
-    const endTime = startTime + duration;
-    
-    // Linear ramp for dry/wet amount
-    dryGain.gain.setValueAtTime(from, startTime);
-    dryGain.gain.linearRampToValueAtTime(1.0 - to, endTime);
-    
-    wetGain.gain.setValueAtTime(to, startTime);
-    wetGain.gain.linearRampToValueAtTime(to, endTime);
-}
-
 // Function to set the dry/wet amount directly
 function setDryWetAmount(amount) {
     manualWetAmount = Math.max(0, Math.min(1, amount)); // Clamp between 0 and 1
@@ -2010,16 +1958,8 @@ function setDryWetAmount(amount) {
         valueDisplay.textContent = Math.round(manualWetAmount * 100) + '%';
     }
     
-    // If in engineer mode and Strophe V is playing, immediately apply the change
-    if (currentMode === 'engineer' && currentScene === 'stropheV' && isStropheVPlaying && dryGain && wetGain) {
-        // For revised implementation: performer always at 100%, only wet signal varies
-        dryGain.gain.setTargetAtTime(1.0, audioCtx.currentTime, 0.05);
-        wetGain.gain.setTargetAtTime(manualWetAmount, audioCtx.currentTime, 0.05);
-        
-        // Update visualization if available
-        if (window.updateWetDryVisualization) {
-            window.updateWetDryVisualization(1.0, manualWetAmount);
-        }
+    if (currentMode === 'engineer' && currentScene === 'stropheV') {
+        updateStropheVCrossfade();
     }
 }
 
