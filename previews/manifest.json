@@ -8,6 +8,10 @@
     "02-engineer": {
       "source_commit": "df652f9e3df012c9b74fc2c78d5b2a72bc39b593",
       "tree": "5d07651e1bf3b8a026efc70c5b195130359af1ec"
+    },
+    "03-listen-explore-mix": {
+      "source_commit": "1019d69ba3332282e6c6534520fb1175ad065616",
+      "tree": "264bbbe220863cc1bd4e46db7d3a9128c97fa0d1"
     }
   },
   "generated_date": "2026-10-06"

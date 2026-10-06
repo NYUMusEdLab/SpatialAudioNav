@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Listen · Explore · Mix — Dialogue de l’ombre double</title>
+  <link rel="icon" href="favicon.ico"><link rel="stylesheet" href="participation.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+  <script defer src="js/participation-core.js"></script><script defer src="js/participation.js"></script>
+</head>
+<body data-experience="listen">
+<header class="app-header">
+  <div><p class="eyebrow">SpatialAudioNav · Preview 03</p><h1>Dialogue de l’ombre double</h1></div>
+  <nav class="experience-switch" aria-label="Choose your experience">
+    <button data-experience="listen" aria-pressed="true">Listen</button>
+    <button data-experience="explore" aria-pressed="false">Explore</button>
+    <button data-experience="mix" aria-pressed="false">Mix</button>
+  </nav>
+</header>
+<main>
+  <section class="movement-heading" aria-label="Current excerpt">
+    <div><h2>Transition I–II</h2><p>Foreground and background</p></div>
+    <div class="source-status"><span class="source-dot" id="source-dot"></span><div><strong>Recorded shadow</strong><span id="source-state">Ready to listen</span></div></div>
+  </section>
+  <section id="position-controls" hidden aria-label="Listening position">
+    <span class="control-label">Listen from</span><div class="position-options">
+      <button data-position="audience" aria-pressed="true">Audience</button><button data-position="clarinetist" aria-pressed="false">Clarinetist</button><button data-position="engineer" aria-pressed="false">Audio engineer</button>
+      <button id="free-move" aria-pressed="false" aria-controls="walk-panel">Move around in 3D</button>
+    </div>
+  </section>
+  <div class="experience-layout">
+    <section class="music-workspace" id="music-workspace" hidden aria-label="Follow and shape the music">
+      <div class="workspace-top"><div class="view-switch" aria-label="Follow the music"><button data-view="timeline" aria-pressed="true">Sound timeline</button><button data-view="score" aria-pressed="false">Musical score</button></div><label class="check"><input type="checkbox" id="cue-guide" checked> Cue guide</label></div>
+      <div id="cue-strip" class="cue-strip"><p><span>Example now</span><strong id="current-cue">Surrounding background</strong></p><p><span>Next change</span><strong id="next-cue">Speaker 6</strong><small id="next-time"></small></p></div>
+      <div id="timeline-view">
+        <div class="contour"><img src="images/transition1-2viz.png" alt="Sound visualization of the Transition I–II recording"><span class="playhead" id="contour-playhead"></span></div>
+        <div class="timeline-label"><span>Example foreground by speaker</span><span>Elapsed time →</span></div>
+        <div id="cue-timeline" class="cue-timeline" aria-label="Example speaker changes across the excerpt"></div>
+      </div>
+      <div id="score-view" hidden>
+        <div class="score-tools"><label for="score-zoom">Score zoom</label><input id="score-zoom" type="range" min="100" max="220" value="100" step="10"><output id="score-zoom-value" for="score-zoom">100%</output></div>
+        <div class="score-scroll" tabindex="0" aria-label="Full musical score. Scroll to read; zoom control above."><img id="full-score" src="images/score/transition12.png" alt="Full Transition I–II score with the published spatialization cues"></div>
+        <p class="small-note">The cue guide follows the existing example timing. Exact alignment to the printed score is still under review; scroll the score at your own pace.</p>
+      </div>
+      <div class="performance-controls">
+        <div class="performance-heading"><strong>Your speaker levels</strong><label for="input-style">Controls <select id="input-style"><option value="hold">Hold</option><option value="latch">Latch</option></select></label><button id="release-speakers" class="quiet">Release all</button></div>
+        <div id="speaker-pads" class="speaker-pads" aria-label="Speaker controls"></div>
+        <p id="input-help" class="small-note">Hold keys 1–6 or touch pads to bring speakers forward. Release to return to the surrounding background.</p>
+      </div>
+    </section>
+    <section class="spatial-workspace" aria-label="Spatial listening display">
+      <div id="walk-panel" hidden>
+        <div id="room-view" aria-label="3D listening room"></div>
+        <div class="walk-controls" aria-label="Move through the room"><button data-walk="left" aria-label="Move left">←</button><button data-walk="forward" aria-label="Move forward">↑</button><button data-walk="back" aria-label="Move backward">↓</button><button data-walk="right" aria-label="Move right">→</button><button data-walk="turn-left">Turn left</button><button data-walk="turn-right">Turn right</button></div>
+        <p class="small-note">Move with W A S D; turn with J / L or drag the room. The buttons also work by touch.</p>
+      </div>
+      <div class="room-map"><canvas id="room-map" role="img" aria-label="Six-speaker room map, clarinetist, and your listening position"></canvas></div>
+      <p id="map-legend" class="map-legend">Speaker light follows the sound. A solid ring marks the foreground.</p>
+      <p id="level-summary" class="level-summary">Example mix · surrounding background</p>
+    </section>
+    <aside class="listening-prompt" id="listening-prompt"><span class="eyebrow" id="prompt-kicker">Listen for</span><h3 id="prompt-title">A gesture comes forward</h3><p id="prompt-text">Hear the sound surrounding you, then notice a louder gesture appearing at one speaker.</p><p class="small-note">The clarinetist is silent during this recorded transition. The example controls the spatial mix.</p></aside>
+  </div>
+  <details class="about"><summary>About this excerpt and preview</summary><div><p>This study lets you listen to the example, change listening position, or perform the spatial mix yourself. Switching experiences keeps your place in the recording. Use headphones.</p><p>Transition I–II contrasts a quieter background on all six speakers with foreground gestures. <a href="https://brahms.ircam.fr/en/analysis/analyse-de-i-dialogue-de-l-ombre-double-i-%281985%29-de-pierre-boulez" target="_blank" rel="noopener">Read Andrew Gerzso’s IRCAM analysis.</a></p><p>Preview 03 focuses on this one excerpt. It inherits the earlier prototype’s cue timings and recordings; musical timing, score alignment, and asset credits still require final review. The position model is an educational approximation.</p></div></details>
+  <p id="app-message" role="status" aria-live="polite"></p>
+</main>
+<footer class="transport" aria-label="Playback">
+  <div class="transport-buttons"><button id="play" class="primary" aria-label="Play audio">Play</button><button id="restart" aria-label="Restart excerpt">↺ <span>Restart</span></button></div>
+  <div class="seek-group"><label for="seek" class="sr-only">Playback position</label><input id="seek" type="range" min="0" max="100" value="0" step="0.1" disabled><div><output id="elapsed">0:00</output><span id="mix-owner">Example mix</span><output id="duration">—</output></div></div>
+  <label class="volume">Volume <input id="volume" type="range" min="0" max="100" value="70" aria-label="Volume"></label>
+</footer>
+<audio id="excerpt" src="audio/transition12.mp3" preload="metadata" crossorigin="anonymous"></audio>
+<nav aria-label="Preview navigation" style="position:fixed;bottom:0;left:0;right:0;z-index:10000;min-height:36px;padding:9px 12px;box-sizing:border-box;background:#13202c;color:#e5ebf0;font:12px system-ui;text-align:center;border-top:1px solid #47586a">Preview 03 · <a href="../" style="color:#b8e6f5">Compare previews</a> · <a href="../../" style="color:#b8e6f5">Preserved original</a></nav>
+</body>
+</html>
