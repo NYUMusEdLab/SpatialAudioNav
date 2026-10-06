@@ -33,16 +33,20 @@ def snapshot(ref, label, participation=False):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) == 3 and sys.argv[1] == '--participation':
+    if len(sys.argv) in (3, 4) and sys.argv[1] == '--participation':
         ref = sys.argv[2]
+        version = sys.argv[3] if len(sys.argv) == 4 else '03-listen-explore-mix'
+        if version not in {'03-listen-explore-mix', '04-brief-accents'}:
+            raise SystemExit('Unknown participation preview version')
+        label = f'Preview {version[:2]}'
         print(json.dumps({
-            '03-listen-explore-mix': snapshot(ref, 'Preview 03', participation=True),
+            version: snapshot(ref, label, participation=True),
             'index.html': Path(__file__).with_name('preview-index.html').read_text(),
-            'source_trees': {'03-listen-explore-mix': git('rev-parse', f'{ref}^{{tree}}').strip()},
+            'source_trees': {version: git('rev-parse', f'{ref}^{{tree}}').strip()},
         }))
         raise SystemExit(0)
     if len(sys.argv) != 3:
-        raise SystemExit('Usage: build-preview-payload.py PLAYBACK_REF ENGINEER_REF | --participation SOURCE_REF')
+        raise SystemExit('Usage: build-preview-payload.py PLAYBACK_REF ENGINEER_REF | --participation SOURCE_REF [VERSION]')
     playback, engineer = sys.argv[1:]
     print(json.dumps({
         '01-playback': snapshot(playback, 'Preview 01 · Playback'),

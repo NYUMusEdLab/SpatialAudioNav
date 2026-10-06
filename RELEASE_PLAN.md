@@ -89,3 +89,13 @@ The cue guide remains provisional. The recording reports approximately 76 second
 Next: review this passage by listening, verify its recording and cue/score correspondence, then apply the approved interaction pattern to the remaining excerpts. The strongest test is whether a newcomer can hear the gesture, locate it, compare positions, and deliberately perform the foreground changes without reading notation.
 
 Automated checks cover cue boundaries, reference-data parity, manual ownership, independent simultaneous inputs, hold/latch behavior, focus-reset primitives, position bounds, and cancellation/replay. Desktop and 390 px browser checks cover layouts, playback continuity, score loading, keyboard/latch controls, and 3D. Physical multi-touch, auditory localization, musical accuracy, and other browsers remain unverified.
+
+## Preview 04 correction — brief accents, 6 October 2026
+
+The owner identified an audio/visual regression in Preview 03. Its model deduplicated repeated speaker rows, but the original `applyPattern()` uses the second row to release the gain back to 0.5. The earlier parity test checked raw rows rather than that behavior and therefore missed the regression. This also invalidates the Preview 03 interpretation above that the final accent is held until the end.
+
+Preview 04 restores all twelve accent/release pairs, preserving the surrounding 0.5 bed. The first speaker-6 accent runs from 8.238 to 8.657 seconds; the final speaker-4 accent releases at 56.929 seconds. Automatic attack (0.1 s time constant) and release (0.3 s) envelopes are scheduled on the audio clock and reconstructed from media time when seeking. Manual takeover cancels future automatic events. Exact score correspondence still needs musical review.
+
+The timeline now shows short accent bars with fading release tails. In Listen/Explore, amber pulses measure signal above the common surrounding bed instead of displaying persistent gold routing rings. Pausing extinguishes sound light. In Mix, a thin white selection outline and optional dashed example cue distinguish controls from audible excess. Physical devices and auditory localization remain unverified.
+
+Regression checks now run the original stateful automation against every boundary, verify brief rise/decay and late background, check signal-relative light, and test scheduled releases and cancellation on manual takeover/pause. Preview 03 and all earlier snapshots remain unchanged; Preview 04 is the recommended version.

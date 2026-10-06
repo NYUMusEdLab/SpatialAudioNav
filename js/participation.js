@@ -1,4 +1,4 @@
-/* Preview 03: a single-excerpt study with one shared media clock. */
+/* Preview 04: a single-excerpt study with one shared media clock. */
 (() => {
     'use strict';
     const C = window.ParticipationCore;
@@ -9,42 +9,69 @@
     const draw = canvas.getContext('2d');
     const keys = new Set(), walkPointers = new Map();
     const speakerKeys = { '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, u: 1, i: 2, k: 3, m: 4, n: 5, h: 6 };
-    let context, master, channels = [], setupPromise, raf = 0, lastFrame = 0;
+    let context, master, sourceMeter, sourceSamples, channels = [], setupPromise, raf = 0, lastFrame = 0;
     let view = 'timeline', guide = true, room, drag = null, lastCue = -1;
-    let plannedGains = [], listeningPose = '';
+    let plannedGains = [], listeningPose = '', automationMode = '';
+    let backgroundRms = 0;
+    const accentLights = Array(6).fill(0);
     const rms = Array(6).fill(0);
     const formatTime = value => Number.isFinite(value) ? `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, '0')}` : '—';
-    const cueName = cue => cue?.speaker ? `Speaker ${cue.speaker} forward` : 'Surrounding background';
+    const cueName = cue => cue?.speaker ? `Speaker ${cue.speaker} accent` : 'Surrounding background';
 
     async function prepareAudio() {
         if (!setupPromise) setupPromise = (async () => {
             context = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
             const source = context.createMediaElementSource(audio);
+            sourceMeter = context.createAnalyser(); sourceMeter.fftSize = 1024;
+            sourceSamples = new Float32Array(sourceMeter.fftSize); source.connect(sourceMeter);
             master = context.createGain(); master.gain.value = Number($('volume').value) / 300;
             master.connect(context.destination);
             channels = C.speakers.map(s => {
                 const gain = context.createGain();
-                const meter = context.createAnalyser(); meter.fftSize = 256;
+                const meter = context.createAnalyser(); meter.fftSize = 1024;
                 const panner = context.createPanner();
                 panner.panningModel = 'HRTF'; panner.distanceModel = 'inverse';
                 panner.refDistance = 2; panner.maxDistance = 100;
                 panner.positionX.value = s.x; panner.positionY.value = s.y; panner.positionZ.value = s.z;
                 gain.gain.value = session.gains(audio.currentTime)[s.id - 1];
-                source.connect(gain); gain.connect(meter); meter.connect(panner); panner.connect(master);
+                sourceMeter.connect(gain); gain.connect(meter); meter.connect(panner); panner.connect(master);
                 return { gain, meter, samples: new Float32Array(meter.fftSize) };
             });
-            plannedGains = []; applyMix(); updateListener(true);
+            plannedGains = []; applyMix(true); updateListener(true);
         })();
         await setupPromise;
         if (context.state === 'suspended') await context.resume();
     }
     const playback = new C.Playback(audio, prepareAudio);
-    function applyMix() {
-        const values = session.gains(audio.currentTime);
+    function scheduleExample() {
+        if (!context) return;
+        const time = audio.currentTime, now = context.currentTime;
+        const levels = C.referenceLevels(time);
         channels.forEach((channel, i) => {
-            if (plannedGains[i] === values[i]) return;
-            channel.gain.gain.setTargetAtTime(values[i], context.currentTime, values[i] > (plannedGains[i] || 0) ? 0.04 : 0.15);
+            const param = channel.gain.gain;
+            param.cancelScheduledValues(now); param.setValueAtTime(levels[i], now);
+            if (audio.paused || audio.ended) return;
+            // Resume the current exponential segment, then schedule every attack/release.
+            const target = C.referenceGains(time)[i];
+            param.setTargetAtTime(target, now, (target > 0.5 ? C.attack : C.release) / audio.playbackRate);
+            C.cues.filter(cue => cue.time > time).forEach(cue => {
+                const next = cue.speaker === i + 1 ? 1 : 0.5;
+                param.setTargetAtTime(next, now + (cue.time - time) / audio.playbackRate,
+                    (next > 0.5 ? C.attack : C.release) / audio.playbackRate);
+            });
         });
+    }
+    function applyMix(force = false) {
+        const values = session.gains(audio.currentTime);
+        const mode = session.mode === 'mix' ? 'manual' : 'example';
+        if (context && mode === 'example' && (force || automationMode !== mode)) scheduleExample();
+        if (mode === 'manual') channels.forEach((channel, i) => {
+            if (!force && automationMode === mode && plannedGains[i] === values[i]) return;
+            const param = channel.gain.gain, now = context.currentTime, current = param.value;
+            param.cancelScheduledValues(now); param.setValueAtTime(current, now);
+            param.setTargetAtTime(values[i], now, values[i] > current ? C.attack : C.release);
+        });
+        automationMode = mode;
         plannedGains = values;
         document.querySelectorAll('.speaker-pad').forEach((pad, i) => {
             pad.setAttribute('aria-pressed', String(session.selected().has(i + 1)));
@@ -75,8 +102,8 @@
         $('mix-owner').textContent = mixing ? 'Your mix' : 'Example mix';
         $('prompt-kicker').textContent = session.mode === 'explore' ? 'Change your perspective' : 'Listen for';
         $('prompt-title').textContent = session.mode === 'explore' ? 'The same music, another place' : 'A gesture comes forward';
-        $('prompt-text').textContent = session.mode === 'explore' ? 'Compare the audience, clarinetist, and engineer positions without restarting. You can also move through the room.' : 'Hear the sound surrounding you, then notice a louder gesture appearing at one speaker.';
-        $('map-legend').textContent = mixing ? (guide ? 'Light: sound at each speaker · solid ring: your foreground · dashed ring: example cue' : 'Light: sound at each speaker · solid ring: your foreground') : 'Speaker light follows the sound. A solid ring marks the foreground.';
+        $('prompt-text').textContent = session.mode === 'explore' ? 'Compare the audience, clarinetist, and engineer positions without restarting. You can also move through the room.' : 'Hear the sound surrounding you, then notice a brief louder gesture at one speaker, followed by a return to the surrounding sound.';
+        $('map-legend').textContent = mixing ? (guide ? 'Amber pulse: sound above the surrounding bed · white outline: selected pad · dashed blue: example accent' : 'Amber pulse: sound above the surrounding bed · white outline: selected pad') : 'The blue circle follows the surrounding sound. Amber pulses show brief accents above it.';
         $('timeline-view').hidden = view !== 'timeline'; $('score-view').hidden = view !== 'score';
         $('cue-strip').hidden = !guide; $('music-workspace').classList.toggle('guide-hidden', !guide);
         document.querySelectorAll('[data-view]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.view === view)));
@@ -122,11 +149,16 @@
             const row = document.createElement('div'); row.className = 'cue-lane';
             const number = document.createElement('span'); number.textContent = s.id;
             const track = document.createElement('div'); track.className = 'lane-track';
-            C.cues.forEach((cue, i) => {
-                if (cue.speaker !== s.id || cue.time >= audio.duration) return;
-                const region = document.createElement('span'); region.className = 'cue-region'; region.dataset.cue = i;
-                region.style.left = `${cue.time / audio.duration * 100}%`;
-                region.style.width = `${(Math.min(audio.duration, C.cues[i + 1]?.time ?? audio.duration) - cue.time) / audio.duration * 100}%`;
+            C.accents.forEach(accent => {
+                if (accent.speaker !== s.id || accent.start >= audio.duration) return;
+                const region = document.createElement('span'); region.className = 'cue-region'; region.dataset.cue = accent.cueIndex;
+                region.style.left = `${accent.start / audio.duration * 100}%`;
+                region.style.width = `${(Math.min(audio.duration, accent.end) - accent.start) / audio.duration * 100}%`;
+                region.title = `Speaker ${s.id}: ${accent.start.toFixed(3)}–${accent.end.toFixed(3)} s, then release`;
+                const tail = document.createElement('span'); tail.className = 'cue-tail';
+                tail.style.left = `${accent.end / audio.duration * 100}%`;
+                tail.style.width = `${Math.min(C.release * 4, audio.duration - accent.end) / audio.duration * 100}%`;
+                track.append(tail);
                 track.append(region);
             });
             const head = document.createElement('span'); head.className = 'playhead'; track.append(head);
@@ -140,15 +172,25 @@
         draw.setTransform(dpr, 0, 0, dpr, 0, 0); draw.clearRect(0, 0, w, h);
         const scale = Math.min(w - 74, h - 65) / 14, cx = w / 2, cy = h / 2;
         const pos = p => [cx + p.x * scale, cy + p.z * scale];
-        draw.strokeStyle = '#3f505e'; draw.lineWidth = 1; draw.beginPath(); draw.arc(cx, cy, 7 * scale, 0, Math.PI * 2); draw.stroke();
+        const bedLight = Math.min(1, Math.sqrt(backgroundRms * 12));
+        draw.strokeStyle = `rgba(144,217,239,${0.18 + bedLight * 0.55})`; draw.lineWidth = 1 + bedLight * 3; draw.beginPath(); draw.arc(cx, cy, 7 * scale, 0, Math.PI * 2); draw.stroke();
         const current = C.cueAt(audio.currentTime).current;
         C.speakers.forEach((s, i) => {
-            const [x, y] = pos(s), selected = plannedGains[i] > 0.5;
-            if (rms[i] > 0.002) { draw.fillStyle = `rgba(242,188,115,${Math.min(0.4, rms[i] * 4)})`; draw.beginPath(); draw.arc(x, y, 24 + Math.min(12, rms[i] * 75), 0, Math.PI * 2); draw.fill(); }
-            draw.fillStyle = rms[i] > 0.008 ? '#d5a661' : '#263744'; draw.beginPath(); draw.arc(x, y, 17, 0, Math.PI * 2); draw.fill();
-            if (selected) { draw.strokeStyle = '#f2bc73'; draw.lineWidth = 2; draw.beginPath(); draw.arc(x, y, 21, 0, Math.PI * 2); draw.stroke(); }
+            const [x, y] = pos(s), light = accentLights[i];
+            draw.fillStyle = `rgba(100,159,178,${0.22 + bedLight * 0.35})`;
+            draw.beginPath(); draw.arc(x, y, 17, 0, Math.PI * 2); draw.fill();
+            if (light > 0) {
+                draw.fillStyle = `rgba(242,188,115,${light * 0.45})`;
+                draw.beginPath(); draw.arc(x, y, 19 + light * 24, 0, Math.PI * 2); draw.fill();
+                draw.strokeStyle = `rgba(242,188,115,${light})`; draw.lineWidth = 1 + light * 4;
+                draw.beginPath(); draw.arc(x, y, 18 + light * 12, 0, Math.PI * 2); draw.stroke();
+            }
+            if (session.mode === 'mix' && session.selected().has(s.id)) {
+                draw.strokeStyle = '#d8e2e8'; draw.lineWidth = 1;
+                draw.beginPath(); draw.arc(x, y, 21, 0, Math.PI * 2); draw.stroke();
+            }
             if (session.mode === 'mix' && guide && current.speaker === s.id) { draw.setLineDash([3, 4]); draw.strokeStyle = '#90d9ef'; draw.lineWidth = 2; draw.beginPath(); draw.arc(x, y, 27, 0, Math.PI * 2); draw.stroke(); draw.setLineDash([]); }
-            draw.fillStyle = rms[i] > 0.008 ? '#11171d' : '#edf0f2'; draw.font = '500 13px system-ui'; draw.textAlign = 'center'; draw.textBaseline = 'middle'; draw.fillText(s.id, x, y);
+            draw.fillStyle = '#edf0f2'; draw.font = '500 13px system-ui'; draw.textAlign = 'center'; draw.textBaseline = 'middle'; draw.fillText(s.id, x, y);
         });
         const [px, py] = pos(C.positions.clarinetist);
         draw.strokeStyle = '#db857c'; draw.lineWidth = 1; draw.beginPath(); draw.arc(px, py, 8, 0, Math.PI * 2); draw.stroke();
@@ -187,7 +229,7 @@
             room.width = w; room.height = h;
         }
         const p = session.pose; room.camera.position.set(p.x, p.y, p.z); room.camera.lookAt(p.x - Math.sin(p.yaw), p.y, p.z - Math.cos(p.yaw));
-        room.meshes.forEach((mesh, i) => { mesh.material.color.setHex(rms[i] > 0.008 ? 0xd4a565 : 0x607281); });
+        room.meshes.forEach((mesh, i) => { mesh.material.color.setRGB(0.2 + accentLights[i] * 0.65, 0.28 + accentLights[i] * 0.25, 0.33 - accentLights[i] * 0.2); });
         room.renderer.render(room.scene, room.camera);
     }
     function requestRender() { if (!raf && !document.hidden) raf = requestAnimationFrame(frame); }
@@ -198,17 +240,24 @@
         applyMix();
         const active = !audio.paused && !audio.ended;
         channels.forEach((channel, i) => { if (!active) { rms[i] = 0; return; } channel.meter.getFloatTimeDomainData(channel.samples); rms[i] = Math.sqrt(channel.samples.reduce((sum, n) => sum + n * n, 0) / channel.samples.length); });
-        if (!active) rms.fill(0);
+        if (active && sourceMeter) {
+            sourceMeter.getFloatTimeDomainData(sourceSamples);
+            backgroundRms = 0.5 * Math.sqrt(sourceSamples.reduce((sum, n) => sum + n * n, 0) / sourceSamples.length);
+        } else { rms.fill(0); backgroundRms = 0; }
+        accentLights.forEach((_, i) => { accentLights[i] = active ? C.accentStrength(rms[i], backgroundRms) : 0; });
         $('source-dot').classList.toggle('sounding', active && rms.some(n => n > 0.002));
         const cue = C.cueAt(audio.currentTime);
-        if (cue.index !== lastCue) { lastCue = cue.index; $('current-cue').textContent = cueName(cue.current); $('next-cue').textContent = cue.next ? cueName(cue.next) : 'End of excerpt'; }
+        if (cue.index !== lastCue) { lastCue = cue.index; $('current-cue').textContent = cueName(cue.current); $('next-cue').textContent = cue.next ? (cue.next.releasedSpeaker ? 'Return to background' : cueName(cue.next)) : 'Background to the end'; }
         $('next-time').textContent = cue.next ? `in ${Math.max(0, cue.next.time - audio.currentTime).toFixed(1)} s` : '';
         const fraction = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.currentTime / audio.duration * 100 : 0;
         document.querySelectorAll('.playhead').forEach(head => { head.style.left = `${fraction}%`; });
         document.querySelectorAll('.cue-region').forEach(region => region.classList.toggle('current', Number(region.dataset.cue) === cue.index));
         document.querySelectorAll('.speaker-pad').forEach((pad, i) => { pad.classList.toggle('expected', guide && cue.current.speaker === i + 1); pad.querySelector('.meter').style.width = `${Math.min(100, rms[i] * 400)}%`; });
         const selected = plannedGains.map((n, i) => n > 0.5 ? i + 1 : null).filter(Boolean);
-        $('level-summary').textContent = `${session.mode === 'mix' ? 'Your mix' : 'Example mix'} · ${selected.length ? 'foreground: ' + selected.join(', ') : 'surrounding background'}`;
+        const returning = channels.map((channel, i) => channel.gain.gain.value > 0.52 && !selected.includes(i + 1) ? i + 1 : null).filter(Boolean);
+        const summary = selected.length ? `accent at ${selected.join(', ')}` : returning.length && active ? `speaker ${returning.join(', ')} returning to background` : 'surrounding background';
+        $('level-summary').textContent = `${active ? '' : 'Paused · '}${session.mode === 'mix' ? 'your mix' : 'example mix'} · ${summary}`;
+        canvas.dataset.accentSpeakers = accentLights.map((n, i) => n > 0.08 ? i + 1 : null).filter(Boolean).join(',');
         paintMap(); paintRoom(); renderTransport();
         if (active || (session.free && walking.size)) requestRender();
     }
@@ -221,8 +270,8 @@
     $('input-style').addEventListener('change', () => { clearInputs(); session.setInputStyle($('input-style').value); renderControls(); });
     $('release-speakers').addEventListener('click', clearInputs);
     $('play').addEventListener('click', togglePlayback);
-    $('restart').addEventListener('click', () => { clearInputs(); audio.currentTime = 0; applyMix(); renderTransport(); requestRender(); });
-    $('seek').addEventListener('input', () => { if (Number.isFinite(audio.duration)) audio.currentTime = Math.min(audio.duration, Math.max(0, Number($('seek').value))); applyMix(); requestRender(); });
+    $('restart').addEventListener('click', () => { clearInputs(); audio.currentTime = 0; applyMix(true); renderTransport(); requestRender(); });
+    $('seek').addEventListener('input', () => { if (Number.isFinite(audio.duration)) audio.currentTime = Math.min(audio.duration, Math.max(0, Number($('seek').value))); applyMix(true); requestRender(); });
     $('volume').addEventListener('input', () => { if (master) master.gain.setTargetAtTime(Number($('volume').value) / 300, context.currentTime, 0.03); });
     $('score-zoom').addEventListener('input', () => { $('full-score').style.width = `${$('score-zoom').value}%`; $('score-zoom-value').textContent = `${$('score-zoom').value}%`; });
     function editing(event) { return event.ctrlKey || event.metaKey || event.altKey || Boolean(event.target.closest('input,select,textarea,[contenteditable="true"],summary')); }
@@ -244,7 +293,8 @@
     window.addEventListener('pagehide', () => { clearInputs(); playback.stop(); });
     audio.addEventListener('loadedmetadata', () => { buildTimeline(); renderTransport(); requestRender(); });
     audio.addEventListener('durationchange', () => { buildTimeline(); renderTransport(); requestRender(); });
-    ['play', 'playing', 'pause', 'seeked', 'timeupdate'].forEach(name => audio.addEventListener(name, () => { renderTransport(); requestRender(); }));
+    ['play', 'playing', 'pause', 'seeked', 'ratechange'].forEach(name => audio.addEventListener(name, () => { applyMix(true); renderTransport(); requestRender(); }));
+    audio.addEventListener('timeupdate', () => { renderTransport(); requestRender(); });
     audio.addEventListener('ended', () => { playback.stop(); clearInputs(); renderTransport(); });
     audio.addEventListener('error', () => { playback.stop(); $('app-message').textContent = 'The recording could not load. Check your connection and reload this preview.'; renderTransport(); });
     const resize = new ResizeObserver(requestRender); resize.observe(canvas.parentElement); resize.observe($('room-view'));

@@ -6,25 +6,52 @@ test('cue boundaries and seeking produce the same reference levels', () => {
     assert.deepEqual(C.referenceGains(0), [0.5, 0.5, 0.5, 0.5, 0.5, 0.5]);
     assert.equal(C.cueAt(8.237).current.speaker, null);
     assert.equal(C.cueAt(8.238).current.speaker, 6);
-    assert.equal(C.cueAt(8.657).current.speaker, 6);
+    assert.equal(C.cueAt(8.657).current.speaker, null);
+    assert.deepEqual(C.referenceGains(9), Array(6).fill(0.5));
+    assert.deepEqual(C.referenceGains(70), Array(6).fill(0.5));
     const expected = C.referenceGains(30);
     C.referenceGains(50); C.referenceGains(0);
     assert.deepEqual(C.referenceGains(30), expected);
     assert.equal(C.cueAt(80).next, null);
 });
 
-test('guide retains the legacy speaker changes without inventing score alignment', () => {
+test('paired accent boundaries match the original stateful applyPattern behavior', () => {
     const fs = require('node:fs'), vm = require('node:vm');
     const source = fs.readFileSync(require('node:path').join(__dirname, '../script.js'), 'utf8');
     const start = source.indexOf('const timestampPatterns =');
     const end = source.indexOf('\n};', start) + 3;
     const data = vm.runInNewContext(source.slice(start, end) + '\ntimestampPatterns["transition1-2"]');
-    data.timestamps.forEach((time, i) => {
-        const expected = data.patterns[i].map(n => n ? 1 : 0.5);
-        // Legacy initialization starts the all-speaker background at half level.
-        if (i === 0) expected.fill(0.5);
-        assert.deepEqual(C.referenceGains(time), Array.from(expected));
-    });
+    const fn = source.slice(source.indexOf('function applyPattern(index)'), source.indexOf('    // Only apply pattern if NOT in engineer mode', source.indexOf('function applyPattern(index)'))) + '}';
+    const targets = Array(6).fill(0.5);
+    const ctx = { timestampPatterns: { 'transition1-2': data }, currentScene: 'transition1-2', isManualMix: () => false,
+        t12SpeakerStates: Array.from({length:6}, () => ({state:'idle'})), audioCtx: {currentTime:0},
+        gainNodes: targets.map((_, i) => ({gain:{cancelScheduledValues(){}, setTargetAtTime(value){targets[i]=value;}}})),
+        updateVolumeDisplay(){}, window:{} };
+    vm.createContext(ctx); vm.runInContext(fn, ctx);
+    // Playback initializes the surrounding bed before the first timed event.
+    for (let i = 1; i < data.timestamps.length; i++) {
+        ctx.applyPattern(i);
+        assert.deepEqual(C.referenceGains(data.timestamps[i]), targets, `event ${i}`);
+    }
+    assert.equal(C.accents.length, 12);
+    assert.deepEqual(C.accents[0], {speaker:6,start:8.238,end:8.657,cueIndex:1});
+});
+
+test('accent envelope rises briefly, decays to the bed, and is stable across seeks', () => {
+    assert.equal(C.referenceLevels(8.238)[5], 0.5);
+    assert.ok(C.referenceLevels(8.6)[5] > 0.98);
+    assert.ok(C.referenceLevels(8.9)[5] < 0.75);
+    assert.ok(C.referenceLevels(10)[5] < 0.51);
+    const expected = C.referenceLevels(8.9); C.referenceLevels(70);
+    assert.deepEqual(C.referenceLevels(8.9), expected);
+    C.referenceLevels(70).forEach(level => assert.ok(Math.abs(level - 0.5) < 1e-12));
+});
+
+test('accent light measures excess signal and vanishes in silence or at bed level', () => {
+    assert.equal(C.accentStrength(0, 0), 0);
+    assert.equal(C.accentStrength(0.04, 0.04), 0);
+    assert.equal(C.accentStrength(0.02, 0.04), 0);
+    assert.ok(C.accentStrength(0.08, 0.04) > C.accentStrength(0.05, 0.04));
 });
 
 test('manual gains survive seeking and reference cue changes', () => {
@@ -77,4 +104,32 @@ test('rejected playback leaves retryable controls and ended replay starts at zer
     await assert.rejects(p.start()); assert.equal(p.wanted, false); assert.equal(p.pending, false);
     m.play = async () => { m.paused = false; }; m.ended = true; m.currentTime = 57;
     await p.start(); assert.equal(m.currentTime, 0); assert.equal(m.paused, false);
+});
+
+
+test('audio scheduling retains release events and cancels them on manual takeover or pause', () => {
+    const fs = require('node:fs'), vm = require('node:vm');
+    const source = fs.readFileSync(require('node:path').join(__dirname, '../js/participation.js'), 'utf8');
+    const calls = Array.from({length:6}, () => []);
+    const channels = calls.map(events => ({gain:{gain:{value:0.5,
+        cancelScheduledValues(time){events.push(['cancel',time]);},
+        setValueAtTime(value,time){events.push(['set',value,time]);},
+        setTargetAtTime(value,time,tau){events.push(['target',value,time,tau]);}
+    }}}));
+    const session = new C.Session();
+    const ctx = {C,session,channels,context:{currentTime:100},audio:{currentTime:8,playbackRate:1,paused:false,ended:false},
+        document:{querySelectorAll:()=>[]},automationMode:'',plannedGains:[]};
+    vm.createContext(ctx);
+    vm.runInContext(source.slice(source.indexOf('    function scheduleExample()'),source.indexOf('    function updateListener')),ctx);
+    ctx.applyMix(true);
+    assert.ok(calls[5].some(c => c[0] === 'target' && c[1] === 1 && Math.abs(c[2]-100.238)<1e-9 && c[3] === 0.1));
+    assert.ok(calls[5].some(c => c[0] === 'target' && c[1] === 0.5 && Math.abs(c[2]-100.657)<1e-9 && c[3] === 0.3));
+    calls.forEach(events => events.length=0);
+    session.setMode('mix');session.press('key:2',2);ctx.applyMix();
+    calls.forEach(events => assert.deepEqual(events[0],['cancel',100]));
+    assert.equal(calls[1].at(-1)[1],1);assert.equal(calls[5].at(-1)[1],0.5);
+    calls.forEach(events => events.length=0);
+    session.setMode('listen');ctx.audio.currentTime=8.9;ctx.audio.paused=true;ctx.applyMix(true);
+    calls.forEach(events => assert.equal(events.filter(c=>c[0]==='target').length,0));
+    assert.equal(calls[5][1][1],C.referenceLevels(8.9)[5]);
 });

@@ -41,3 +41,17 @@ body[data-experience=mix] .movement-heading{margin-bottom:12px}
   body[data-experience=mix] .check{font-size:11px;white-space:nowrap;gap:2px}
   body[data-experience=mix] .check input{margin:0 3px 0 0}
 }
+
+/* Accent widths are their actual attack/hold intervals; the tail shows release. */
+.cue-region{min-width:2px;background:#f2bc73;opacity:.75;z-index:1}
+.cue-tail{position:absolute;top:3px;bottom:3px;background:linear-gradient(to right,#f2bc7380,transparent);pointer-events:none}
+.guide-hidden .cue-tail{visibility:hidden}
+.cue-region.current{background:#ffe1aa;box-shadow:0 0 7px #f2bc7380}
+@media(min-width:651px) and (max-height:780px){
+  body[data-experience=mix] .app-header{padding-top:8px;padding-bottom:8px}
+  body[data-experience=mix] main{padding-top:8px}
+  body[data-experience=mix] .movement-heading{margin-bottom:8px}
+  body[data-experience=mix] .cue-strip{margin:6px 0;padding:4px 0}
+  body[data-experience=mix] .cue-strip p{line-height:1.35}
+  body[data-experience=mix] .contour img{height:40px}
+}

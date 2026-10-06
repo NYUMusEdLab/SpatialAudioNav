@@ -8,9 +8,16 @@
 })(typeof globalThis === 'object' ? globalThis : this, function () {
     const times = [0, 8.238, 8.657, 10.897, 11.442, 12.834, 13.283, 16.761, 17.966, 18.536, 19.240, 21.339, 22.231, 26.715, 27.833, 29.779, 30.296, 38.051, 38.437, 40.586, 41.628, 47.053, 47.710, 56.151, 56.929];
     const foreground = [null, 6, 6, 5, 5, 2, 2, 3, 3, 4, 4, 1, 1, 2, 2, 1, 1, 3, 3, 5, 5, 6, 6, 4, 4];
-    // Repeated entries have identical output; show only actual changes in the guide.
-    const cues = times.map((time, i) => ({ time, speaker: foreground[i] }))
-        .filter((cue, i, all) => i === 0 || cue.speaker !== all[i - 1].speaker);
+    // In the original applyPattern(), the second entry for a speaker releases it.
+    // Preserve every boundary: these pairs describe brief accents, not held routes.
+    const cues = times.map((time, i) => ({
+        time, speaker: i % 2 ? foreground[i] : null,
+        releasedSpeaker: i > 0 && i % 2 === 0 ? foreground[i] : null
+    }));
+    const accents = cues.flatMap((cue, i) => cue.speaker ? [{
+        speaker: cue.speaker, start: cue.time, end: cues[i + 1].time, cueIndex: i
+    }] : []);
+    const attack = 0.1, release = 0.3;
     const speakers = [210, 150, 90, 30, 330, 270].map((degrees, i) => ({
         id: i + 1, x: 7 * Math.sin(degrees * Math.PI / 180), y: 1.7,
         z: 7 * Math.cos(degrees * Math.PI / 180)
@@ -28,6 +35,24 @@
     function referenceGains(time) {
         const selected = cueAt(time).current.speaker;
         return speakers.map(s => s.id === selected ? 1 : 0.5);
+    }
+    // Evaluate the same exponential envelopes at any media time, including seeks.
+    function referenceLevels(time) {
+        return speakers.map(s => {
+            let level = 0.5, target = 0.5, previous = 0, tau = release;
+            for (const cue of cues) {
+                if (cue.time > time) break;
+                level = target + (level - target) * Math.exp(-(cue.time - previous) / tau);
+                target = cue.speaker === s.id ? 1 : 0.5;
+                tau = target > 0.5 ? attack : release;
+                previous = cue.time;
+            }
+            return target + (level - target) * Math.exp(-(Math.max(0, time) - previous) / tau);
+        });
+    }
+    // Signal above the 50% surrounding bed. Metering is before positional panning.
+    function accentStrength(signal, background) {
+        return Math.min(1, Math.sqrt(Math.max(0, signal - background - 0.0005) * 12));
     }
     class Session {
         constructor() {
@@ -91,5 +116,5 @@
             }
         }
     }
-    return { cues, speakers, positions, cueAt, referenceGains, Session, Playback };
+    return { cues, accents, attack, release, speakers, positions, cueAt, referenceGains, referenceLevels, accentStrength, Session, Playback };
 });
