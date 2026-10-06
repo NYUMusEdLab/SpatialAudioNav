@@ -1101,3 +1101,90 @@ input:checked + .slider:before {
         font-size: 16px;
     }
 }
+/* Initial publication preview: one control column and a clear listening area. */
+[hidden] { display: none !important; }
+button, input, select { font: inherit; }
+button:focus-visible, select:focus-visible, input:focus-visible, #scene-container:focus-visible {
+    outline: 3px solid #85d6ed; outline-offset: 3px;
+}
+#title-container {
+    position: fixed; top: 24px; left: 330px; right: 28px;
+    z-index: 105; pointer-events: none; transition: opacity .3s ease;
+}
+#title-content h1 { font-size: clamp(20px, 2.4vw, 32px); color: #f6cf89; margin-bottom: 8px; }
+#title-content .description { font-size: 14px; color: #c6cbd1; }
+#title-content .attributions { display: none; }
+.info-open #title-container { opacity: 0; }
+#control-panel {
+    position: absolute; top: 20px; bottom: 48px; left: 20px; width: 280px;
+    overflow-y: auto; z-index: 200; padding: 16px; display: flex; flex-direction: column; gap: 14px;
+    background: #14191fed; border: 1px solid #3b4149; border-radius: 14px;
+}
+#control-panel .mode-selector, #control-panel .scene-selector, #control-panel .performer-dropdown,
+#control-panel #dryWetControl, #control-panel .audio-controls {
+    position: static; width: 100%; min-width: 0; margin: 0; padding: 0;
+    background: none; border: 0; box-shadow: none; transform: none;
+}
+#control-panel .mode-label { text-align: left; margin: 0; }
+#control-panel .mode-btn { flex: 1; min-height: 40px; }
+#control-panel .scene-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+#control-panel .scene-btn { font-size: 12px; min-height: 40px; padding: 8px; }
+#control-panel .performer-dropdown { display: flex; flex-direction: column; gap: 7px; }
+#control-panel select { width: 100%; color: #eee; background: #242b32; padding: 8px; border: 1px solid #59616a; border-radius: 6px; }
+#control-panel #toggleArabicBtn, #control-panel #volumeDisplayBtn, #control-panel #scoreDisplayBtn,
+#control-panel #triviaButton, #control-panel .minimized-view-toggle-btn {
+    position: static; width: 100%; height: auto; min-height: 38px; padding: 8px 10px;
+    border: 1px solid #626c76; border-radius: 7px; font-size: 13px; font-style: normal;
+    color: #eee; background: #242b32; box-shadow: none; transform: none;
+}
+#control-panel .minimized-view-toggle-btn:disabled { opacity: .45; cursor: not-allowed; }
+#control-panel .audio-controls { display: flex; justify-content: center; gap: 18px; }
+#control-panel #playPauseButton, #control-panel #resetButton { width: 46px; height: 46px; }
+.mode-audience #engineer-controls, .mode-audience .minimized-view-toggle-btn { display: none; }
+.mode-engineer #performer-dropdown-container, .mode-engineer .audience-help, .mode-engineer #joystick-container { display: none !important; }
+#engineer-controls { border-top: 1px solid #3b4149; padding-top: 14px; }
+.mix-choice { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.mix-choice button, .speaker-trigger {
+    color: #eee; background: #242b32; border: 1px solid #626c76; border-radius: 6px; padding: 9px 5px;
+    cursor: pointer; font-size: 12px; min-height: 40px;
+}
+.mix-choice button[aria-pressed=true], .speaker-trigger[aria-pressed=true] { color: #13171a; background: #f3ba68; border-color: #f3ba68; }
+#mix-help, .audience-help { font-size: 12px; line-height: 1.6; color: #c6cbd1; margin: 10px 0 0; }
+#speaker-controls { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin-top: 12px; }
+#dryWetControl .control-label { display: block; text-align: left; }
+#dryWetControl input:disabled { opacity: .45; }
+#map-legend { position: absolute; bottom: 48px; left: 330px; right: 24px; z-index: 100; font-size: 12px; line-height: 1.5; color: #bbc4ce; text-align: center; pointer-events: none; }
+.mode-audience #map-legend { display: none; }
+.mode-engineer .topdown-view.expanded {
+    top: 100px; bottom: 85px; left: 320px; right: 20px; width: auto; height: auto; transform: none;
+}
+.mode-audience .topdown-view { bottom: 55px; right: 24px; width: 220px; height: 220px; }
+#joystick-container { bottom: 75px; right: 265px; width: 100px; height: 100px; }
+.trivia-container { background: #161c23; width: min(680px, calc(100% - 40px)); height: min(620px, 80%); box-shadow: 0 16px 70px #000c; }
+.trivia-header h2 { font-size: 22px; }
+.trivia-content a { color: #9ed9ed; }
+.trivia-navigation { flex-wrap: wrap; }
+#arabic-visualization-container { left: 330px; right: 24px; bottom: 85px; width: auto; transform: none; z-index: 205; }
+#volume-display-panel { top: 110px; left: auto; right: 24px; z-index: 220; }
+#score-panel { z-index: 220; top: 100px; bottom: 48px; height: auto; width: min(400px, calc(100% - 340px)); }
+@media (max-width: 700px) {
+    #title-container { top: 14px; left: 16px; right: 16px; }
+    #title-content h1 { font-size: 19px; margin-bottom: 4px; }
+    #title-content .description { font-size: 12px; }
+    #control-panel { top: auto; left: 10px; right: 10px; bottom: 42px; width: auto; height: 37%; padding: 12px; gap: 10px; }
+    .mode-engineer .topdown-view.expanded { top: 82px; left: 10px; right: 10px; bottom: calc(37% + 92px); }
+    #map-legend { left: 14px; right: 14px; bottom: calc(37% + 49px); font-size: 10px; }
+    .mode-audience .topdown-view { top: 80px; bottom: auto; right: 12px; width: 130px; height: 130px; }
+    #joystick-container { top: 110px; left: 20px; right: auto; bottom: auto; width: 90px; height: 90px; }
+    #score-panel { top: 76px; left: 10px; right: 10px; width: auto; bottom: 45px; }
+    #arabic-visualization-container { left: 10px; right: 10px; bottom: calc(37% + 55px); }
+    .trivia-container { top: 47%; width: calc(100% - 24px); height: 78%; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; }
+}
+
+@media (min-width: 1100px) {
+    .mode-engineer.score-open .topdown-view.expanded { right: 440px; }
+    .mode-engineer.score-open #map-legend { right: 440px; }
+}

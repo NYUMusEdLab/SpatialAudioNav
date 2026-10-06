@@ -2,9 +2,11 @@
 
 Scope: publish the four existing Boulez scenes with audience and audio engineer modes. Spatial Atelier/composer (PR #25) is deferred. Evaluate any useful layout changes separately rather than merging the whole PR.
 
+Design priority: let learners experience the audio engineer's musical decisions, supported by audience movement and the performer listening perspective. Keep the current two-mode interface; the performer perspective remains available within Audience. See [the Boulez context review](docs/BOULEZ_CONTEXT_REVIEW.md) for accepted suggestions, rejected implementations, and source checks.
+
 ## Preserved online baseline
 
-The `gh-pages` branch is frozen at `f4e7352db44d7d16d42339dc0199492fabca0cd7` (December 23, 2025). GitHub Pages publishes its root directory at https://nyumusedlab.github.io/SpatialAudioNav/. Keep this branch unchanged; develop and review release work on `release/initial-publication`. Future deployment of the new version requires a separate explicit decision.
+The original site at https://nyumusedlab.github.io/SpatialAudioNav/ preserves every root entry from `f4e7352db44d7d16d42339dc0199492fabca0cd7` (December 23, 2025). On 6 October 2026 the owner requested new GitHub Pages previews. Add versions only under `previews/` on `gh-pages`; do not replace the root app. Keep an additional archive branch at the original commit. Development continues on `release/initial-publication`. See [preview guide](docs/PREVIEW_GUIDE.md).
 
 ## 1. Audio correctness — in progress
 
@@ -12,6 +14,10 @@ The `gh-pages` branch is frozen at `f4e7352db44d7d16d42339dc0199492fabca0cd7` (D
 - [x] Remove the duplicate keyboard ramp that failed to update the manual setting.
 - [x] Derive circular panning from playback time instead of screen refresh rate.
 - [ ] Listen through all scenes and validate timing cues against the source material.
+- [ ] Identify the recording and Roman/Arabic version, then document the cue-to-audio mapping for each excerpt.
+- [x] Resolve Transition III–IV's automatic panner overriding manual engineer gains with explicit example/manual controls.
+- [ ] Verify its final stationary-speaker passage against the recording and score.
+- [ ] Verify Strophe V wet-file contents and the intended audible resonance location before changing its routing. Distinguish the hidden piano from the loudspeakers reproducing its sound.
 - [ ] Verify speaker positions and labels across audio, 3D, and 2D views.
 
 ## 2. Playback lifecycle
@@ -20,19 +26,28 @@ The `gh-pages` branch is frozen at `f4e7352db44d7d16d42339dc0199492fabca0cd7` (D
 - [x] Cancel stale asynchronous playback starts and reuse one audio context during scene switching.
 - [x] Reset controls at track completion and reset ended tracks for replay.
 - [ ] Complete listening checks for seek and reset across all scenes.
+- [ ] Check dry/wet alignment through complete playback, buffering, seeking, reset, and replay; do not assume simultaneous play calls establish sustained synchronization.
 - Ensure keyboard input does not interfere with focused controls; clear held keys on focus loss.
 
 ## 3. Layout and accessibility
 
 - Make the title dismissible and remove dated draft labels.
+- Make the information button open and close the same panel; fade the title while it is open, restore it on close, and respect reduced-motion preferences.
+- Use mode classes to control layout consistently, retaining the two existing modes.
+- Keep the engineer 3D toggle visibly disabled as requested; preserve the current hidden engineer 3D display unless a different display policy is chosen.
+- Label the red ring Performer and the white ring Audio Engineer; enlarge the performer ring for readability, with matching 2D/3D positions and no extra floating label panels.
 - Arrange controls and scores for desktop and phone widths without overlap.
 - Explain audience movement and engineer mixing controls in the interface.
+- Clearly distinguish the demonstrated cue pattern from the learner's actual speaker gains. Each scene needs an understandable engineer task and an explicit way back to the reference behavior.
 - Add accessible names, focus behavior, and appropriate dialog handling.
 
 ## 4. Educational content and publication assets
 
 - Replace the five placeholder audience panels (issue #6).
 - Fill the Composer, Piece, Technique, History, and scene information sections with sourced text.
+- Add one short listen–try–compare activity per scene, led by the engineer's role. Explain the pre-rendered piano resonance and the limits of the listening model.
+- Check historical quotations and references against their originals. Do not claim classroom trials, user testing, or measured learning outcomes that have not occurred.
+- Preserve the project's collaborative development credits, subject to final owner review.
 - Confirm recording and score-image permissions; record attribution and approved credits.
 - Choose the code license with the project owner.
 
@@ -45,6 +60,22 @@ The `gh-pages` branch is frozen at `f4e7352db44d7d16d42339dc0199492fabca0cd7` (D
 - Check current Chrome, Safari, Firefox, and touch devices for playback, rendering, controls, and layout.
 - Confirm GitHub Pages deployment and complete a final check of the deployed site.
 
+## Order after the context review
+
+1. Make engineer control and cue feedback dependable, including the Transition III–IV conflict; validate the recording-specific musical behavior.
+2. Deliver the small UI corrections: information toggle/title fade, role labels, mode styling, disabled 3D toggle, keyboard focus handling, and responsive layout.
+3. Complete the learning activities, factual content, credits, and asset permissions.
+4. Finish listening, accessibility, device, and browser checks before choosing a new deployment destination.
+
+Real-time convolution remains a future requirement. Preserve a replaceable wet-source design, but defer an inactive convolver implementation, per-speaker convolution, VR, multi-user features, automatic score following, and general scene authoring until after the initial release.
+
 ## Verification so far
 
-The existing live site loads and starts playback; mode and scene switching respond without immediate console errors. This is a smoke check, not musical or cross-browser approval. Focused audio regression tests run with `node --test tests/audio-effects.test.cjs`. Local preview also verified rapid scene changes, synchronized Strophe V playback, and pausing both tracks without console errors. Ten focused regression tests pass. Remaining release gates are deliberately unchecked.
+The existing live site loads and starts playback; mode and scene switching respond without immediate console errors. This is a smoke check, not musical or cross-browser approval. Focused audio regression tests run with `node --test tests/audio-effects.test.cjs`. Local preview also verified rapid scene changes, synchronized Strophe V playback, and pausing both tracks without console errors. Fourteen focused regression tests pass, including manual control, returning to the current example cue, and keyboard focus handling. Remaining release gates are deliberately unchecked.
+
+
+## Preview 02 implementation status — 6 October 2026
+
+Implemented explicit example/manual ownership for the engineer mix; clickable speaker switches; focus-loss key cleanup and focused-control guards; one responsive control column; a shared information toggle, close, and Escape action; title fade; visible disabled engineer 3D toggle; in-ring role labels; optional score panel; and short scene activities with stated model limitations. The obsolete AudioVisualizer script is no longer loaded. Scores still scroll approximately by elapsed duration. Phone controls use a scrollable panel.
+
+Local checks covered desktop and 390 px layout, scene switching, playback controls, manual Transition III–IV control, Strophe V slider/reset, and information closure. This is a preview smoke check; full listening, cue accuracy, sustained track alignment, assistive-technology testing, and Safari/Firefox/device checks remain release gates. The five placeholder wall panels and final credits/permissions still need work.

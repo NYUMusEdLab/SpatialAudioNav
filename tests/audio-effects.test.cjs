@@ -15,16 +15,18 @@ function gain() {
 }
 function context() {
     const ctx = {
-        currentScene: 'stropheV', currentMode: 'audience', manualWetAmount: 0,
+        currentScene: 'stropheV', currentMode: 'audience', engineerControl: 'manual', manualWetAmount: 0,
         currentAudioElement: { currentTime: 0, duration: 80 },
         dryGain: gain(), wetGain: gain(), audioCtx: { currentTime: 0 },
-        window: {}, document: { getElementById: () => null },
+        window: {}, document: { getElementById: () => null, querySelectorAll: () => [], body: { classList: { contains: () => false } } },
+        engineerSpeakerKeys: Array(6).fill(false), engineerKeyToSpeakerIndex: { '1': 0, '6': 5 },
         circularPanner: { active: true, speed: 0.5, angle: 0 },
         accelerationFactor: 1, gainNodes: Array.from({ length: 6 }, gain),
         requestAnimationFrame: () => 1, animationFrameId: null,
     };
     vm.createContext(ctx);
-    for (const name of ['updateStropheVCrossfade', 'setDryWetAmount', 'animateCircularPanning']) {
+    ctx.playSpeaker = values => values.forEach((value, index) => { ctx.gainNodes[index].gain.value = value; });
+    for (const name of ['isManualMix', 'ignoreAudioShortcut', 'applyEngineerSpeakers', 'applyCurrentMix', 'handleEngineerSpeakerKeys', 'resetEngineerSpeakerKeys', 'updateStropheVCrossfade', 'setDryWetAmount', 'updateCircularPanning', 'animateCircularPanning']) {
         vm.runInContext(functionSource(name), ctx);
     }
     return ctx;
@@ -93,7 +95,7 @@ function playbackContext() {
     Object.assign(ctx, {
         playbackGeneration: 0, playbackPending: false, isStropheVPlaying: false,
         currentAudioElement: media(), stropheWetAudioElement: media(),
-        playPauseButton: { dataset: { playing: 'false' }, style: { setProperty() {} } },
+        playPauseButton: { dataset: { playing: 'false' }, style: { setProperty() {} }, setAttribute() {} },
         initAudioContext: () => Promise.resolve(),
         stopPatternSwitching() {}, stopSpecialEffects() {},
         startPatternSwitching() {}, startSpecialEffects() {},
@@ -177,7 +179,7 @@ test('rapid scene switches stop the wet track and only restart the latest scene'
         audioElements: { default: media(), 'transition1-2': media(), 'transition3-4': media(), stropheV: media() },
         timestampPatterns: Object.fromEntries(['default', 'transition1-2', 'transition3-4', 'stropheV'].map(name => [name, {timestamps: [0], patterns: [[1,0,0,0,0,0]]}])),
         hiddenSpeakerPosition: null,
-        updateScoreForCurrentScene() {}, resetT12SpeakerStates() {},
+        updateScoreForCurrentScene() {}, resetT12SpeakerStates() {}, updateEngineerControls() {},
         toggleVolumeDisplayVisibility() {}, toggleDryWetControlVisibility() {},
         updateArabicVisualizationImage() {},
         setupWebAudio: () => new Promise(done => completions.push(done)),
@@ -195,4 +197,76 @@ test('rapid scene switches stop the wet track and only restart the latest scene'
     assert.equal(ctx.currentScene, 'transition3-4');
     assert.equal(ctx.audioElements['transition1-2'].paused, true);
     assert.equal(ctx.playPauseButton.dataset.playing, 'false');
+});
+
+test('manual circular-scene gains survive animation and seeking', () => {
+    const ctx = context();
+    ctx.currentScene = 'transition3-4';
+    ctx.currentMode = 'engineer';
+    ctx.engineerSpeakerKeys[2] = true;
+    ctx.applyCurrentMix();
+    const manual = ctx.gainNodes.map(node => node.gain.value);
+    assert.deepEqual(manual, [0, 0, 1, 0, 0, 0]);
+    for (let time = 0; time < 80; time++) {
+        ctx.currentAudioElement.currentTime = time;
+        ctx.animateCircularPanning();
+        ctx.applyCurrentMix();
+        assert.deepEqual(ctx.gainNodes.map(node => node.gain.value), manual);
+    }
+    ctx.resetEngineerSpeakerKeys();
+    assert.deepEqual(ctx.gainNodes.map(node => node.gain.value), [0, 0, 0, 0, 0, 0]);
+});
+
+test('returning to the example resumes the current cue without seeking or restarting', () => {
+    const ctx = context();
+    ctx.currentScene = 'transition3-4';
+    ctx.currentMode = 'engineer';
+    ctx.currentAudioElement.currentTime = 27;
+    ctx.engineerSpeakerKeys[2] = true;
+    ctx.applyCurrentMix();
+    ctx.resetT12SpeakerStates = () => {};
+    ctx.updateEngineerControls = () => {};
+    vm.runInContext(functionSource('setEngineerControl'), ctx);
+    ctx.setEngineerControl('reference');
+    assert.equal(ctx.currentAudioElement.currentTime, 27);
+    assert.equal(ctx.engineerSpeakerKeys.some(Boolean), false);
+    assert.notDeepEqual(ctx.gainNodes.map(node => node.gain.value), [0, 0, 1, 0, 0, 0]);
+    const reference = context();
+    reference.currentAudioElement.currentTime = 27;
+    reference.updateCircularPanning();
+    assert.deepEqual(ctx.gainNodes.map(node => node.gain.value), reference.gainNodes.map(node => node.gain.value));
+});
+
+test('engineer example mode follows resonance cues and manual mode takes control', () => {
+    const ctx = context();
+    ctx.currentMode = 'engineer';
+    ctx.engineerControl = 'reference';
+    ctx.currentAudioElement.currentTime = 43.6;
+    ctx.manualWetAmount = 0.25;
+    ctx.applyCurrentMix();
+    assert.equal(ctx.wetGain.gain.value, 1);
+    ctx.engineerControl = 'manual';
+    ctx.applyCurrentMix();
+    assert.equal(ctx.wetGain.gain.value, 0.25);
+    assert.equal(ctx.dryGain.gain.value, 1);
+});
+
+test('focused controls ignore shortcuts but key release still clears a held speaker', () => {
+    const ctx = context();
+    ctx.currentMode = 'engineer';
+    ctx.currentScene = 'default';
+    const event = { key: '1', target: { closest: () => ({}) }, preventDefault() {} };
+    ctx.handleEngineerSpeakerKeys(event, true);
+    assert.equal(ctx.engineerSpeakerKeys[0], false);
+    event.target.closest = () => null;
+    event.metaKey = true;
+    ctx.handleEngineerSpeakerKeys(event, true);
+    assert.equal(ctx.engineerSpeakerKeys[0], false);
+    event.metaKey = false;
+    ctx.handleEngineerSpeakerKeys(event, true);
+    assert.equal(ctx.engineerSpeakerKeys[0], true);
+    event.target.closest = () => ({});
+    ctx.handleEngineerSpeakerKeys(event, false);
+    assert.equal(ctx.engineerSpeakerKeys[0], false);
+    assert.equal(ctx.gainNodes[0].gain.value, 0);
 });

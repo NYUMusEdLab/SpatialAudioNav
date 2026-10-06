@@ -58,6 +58,7 @@ const posX = 0, posY = 1.7, posZ = 0;
 let currentMode = 'audience'; // Default to audience mode
 let currentScene = 'default';
 let isMixingMode = false;
+let engineerControl = 'reference';
 let toggleMin3DViewBtn = null; // Declare variable for the toggle button
 let currentPerformerSpeakerIndex = 0;
 
@@ -659,6 +660,7 @@ function setPlaybackState(playing) {
     playPauseButton.dataset.playing = String(playing);
     playPauseButton.style.setProperty('--play-pause-icon', playing ? '"\\23F8"' : '"\\25B6"');
     playPauseButton.title = playing ? 'Pause Audio' : 'Play Audio';
+    playPauseButton.setAttribute('aria-label', playing ? 'Pause audio' : 'Play audio');
 }
 
 function stopPlayback() {
@@ -740,7 +742,9 @@ resetButton.addEventListener('click', () => {
     playPauseButton.style.setProperty('--play-pause-icon', '"\\25B6"');
     
     currentPatternIndex = 0;
-    applyPattern(currentPatternIndex);
+    resetT12SpeakerStates();
+    resetEngineerSpeakerKeys();
+    applyCurrentMix();
     stopPatternSwitching();
     stopSpecialEffects();
     
@@ -750,6 +754,7 @@ resetButton.addEventListener('click', () => {
     }
     
     if (window.visualizer3D) {
+        window.visualizer3D.clearMovementKeys();
         window.visualizer3D.resetOrientation();
     }
     
@@ -783,6 +788,10 @@ function resetT12SpeakerStates() {
 // INITIAL TIMING SETUP: Different movements start with different speaker configurations
 function setInitialSpeakerGains() {
     if (!gainNodes.length) return;
+    if (isManualMix()) {
+        resetEngineerSpeakerKeys();
+        return;
+    }
     
     if (currentScene === "transition1-2") {
         // TRANSITION 1-2 INITIAL TIMING: All speakers start at 50% volume (0.5)
@@ -888,7 +897,8 @@ function handleSeek(event) {
 
     // Apply the pattern and update the current index
     currentPatternIndex = newIndex;
-    playSpeaker(timestampPatterns[currentScene].patterns[newIndex]);
+    resetT12SpeakerStates();
+    applyCurrentMix();
 
     // Update 3D visualization as well
     if (window.updateVisualization3D) {
@@ -912,6 +922,7 @@ function startPatternSwitching() {
 
         // Special handling for Transition 3-4 (circular panning)
         if (currentScene === 'transition3-4') {
+            updateScoreScrollPosition();
             return;  // Skip normal pattern switching, handled by circular panning
         }
         
@@ -980,6 +991,13 @@ function stopSpecialEffects() {
 // TIMING CONTROL: Circular panning speed accelerates based on audio position
 function animateCircularPanning() {
     if (!circularPanner.active) return;
+    updateCircularPanning();
+    animationFrameId = requestAnimationFrame(animateCircularPanning);
+}
+
+function updateCircularPanning() {
+    // Reference automation must never overwrite the learner's speaker levels.
+    if (isManualMix()) return;
     
     const currentTime = currentAudioElement ? currentAudioElement.currentTime : 0;
     const audioDuration = currentAudioElement ? currentAudioElement.duration : NaN;
@@ -1016,8 +1034,6 @@ function animateCircularPanning() {
         window.updateVisualization3D(gainNodes);
     }
     
-    // Continue animation
-    animationFrameId = requestAnimationFrame(animateCircularPanning);
 }
 
 // Apply a specific pattern
@@ -1028,7 +1044,7 @@ function applyPattern(index) {
     const pattern = patterns[index];
     
     // Special handling for transition1-2
-    if (currentScene === "transition1-2" && currentMode !== 'engineer') {
+    if (currentScene === "transition1-2" && !isManualMix()) {
         // Initialize state if needed
         if (!t12SpeakerStates || t12SpeakerStates.length !== 6) {
             resetT12SpeakerStates();
@@ -1078,7 +1094,7 @@ function applyPattern(index) {
     }
     
     // Only apply pattern if NOT in engineer mode
-    if (currentMode !== 'engineer') {
+    if (!isManualMix()) {
         // If in mixing mode and not performer mode, only apply pattern if not manually set
         if (!isMixingMode || currentMode === 'performer') {
             playSpeaker(pattern);
@@ -1132,140 +1148,110 @@ function toggleVolumeDisplayVisibility(scene) {
     }
 }
 
-// Function to change the mode (engineer, audience)
+// One owner for the audible mix: the reference or the learner.
+function isManualMix() {
+    return currentMode === 'engineer' && engineerControl === 'manual';
+}
+
+function ignoreAudioShortcut(event) {
+    return event.ctrlKey || event.metaKey || event.altKey ||
+        document.body.classList.contains('info-open') ||
+        Boolean(event.target?.closest?.('input, textarea, select, [contenteditable="true"], [role="dialog"]'));
+}
+window.ignoreAudioShortcut = ignoreAudioShortcut;
+
+function applyEngineerSpeakers() {
+    const baseVolume = currentScene === 'transition1-2' ? 0.5 : 0;
+    playSpeaker(engineerSpeakerKeys.map(active => active ? 1 : baseVolume));
+    document.querySelectorAll('.speaker-trigger').forEach((button, index) => {
+        button.setAttribute('aria-pressed', String(engineerSpeakerKeys[index]));
+    });
+}
+
+function applyCurrentMix() {
+    if (!gainNodes.length || !currentAudioElement) return;
+    if (currentScene === 'stropheV') {
+        updateStropheVCrossfade();
+    } else if (isManualMix()) {
+        applyEngineerSpeakers();
+    } else if (currentScene === 'transition3-4') {
+        updateCircularPanning();
+    } else {
+        const times = timestampPatterns[currentScene].timestamps;
+        currentPatternIndex = Math.max(0, times.findIndex((time, index) =>
+            currentAudioElement.currentTime >= time && currentAudioElement.currentTime < (times[index + 1] ?? Infinity)));
+        applyPattern(currentPatternIndex);
+    }
+}
+
+function updateEngineerControls() {
+    const manual = isManualMix();
+    document.querySelectorAll('[data-engineer-control]').forEach(button => {
+        button.setAttribute('aria-pressed', String(button.dataset.engineerControl === engineerControl));
+    });
+    const speakers = document.getElementById('speaker-controls');
+    if (speakers) speakers.hidden = !manual || currentScene === 'stropheV';
+    const slider = document.getElementById('dryWetSlider');
+    if (slider) slider.disabled = !manual;
+    const help = document.getElementById('mix-help');
+    if (help) help.textContent = !manual
+        ? 'Hear the programmed example. Choose Mix yourself to take over without restarting.'
+        : currentScene === 'stropheV'
+            ? 'Shape the piano resonance with the slider or keys 0–9. The direct clarinet remains audible.'
+            : 'Tap speakers to switch them on or off, or hold keys 1–6. Release keys to return to the background level.';
+    const legend = document.getElementById('map-legend');
+    if (legend) legend.textContent = currentScene === 'stropheV'
+        ? 'Red ring: performer · White ring: audio engineer · Resonance comes from the additional source.'
+        : currentScene === 'transition3-4'
+            ? 'Speaker glow shows the audible mix. The circular example is still awaiting final cue validation.'
+            : 'Moving bars: upcoming example cues · Speaker glow: your current audible mix';
+}
+
+function setEngineerControl(control) {
+    if (!['manual', 'reference'].includes(control)) return;
+    engineerControl = control;
+    engineerSpeakerKeys.fill(false);
+    resetT12SpeakerStates();
+    updateEngineerControls();
+    applyCurrentMix();
+}
+
 function setMode(mode) {
     if (!['engineer', 'audience'].includes(mode)) return;
-    
-    const previousMode = currentMode; // Store the previous mode
     currentMode = mode;
-    updateListenerPosition();
-    
-    console.log(`Setting mode to: ${mode}${previousMode ? ` (from ${previousMode})` : ''}`); // Debug log
-    
-    // Update UI
-    document.querySelectorAll('.mode-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.mode === mode);
+    window.currentMode = mode;
+    document.body.classList.toggle('mode-engineer', mode === 'engineer');
+    document.body.classList.toggle('mode-audience', mode === 'audience');
+    document.querySelectorAll('.mode-btn').forEach(button => {
+        button.classList.toggle('active', button.dataset.mode === mode);
+        button.setAttribute('aria-pressed', String(button.dataset.mode === mode));
     });
-    
-    // Handle view swapping for different modes
     const sceneContainer = document.getElementById('scene-container');
     const topdownView = document.querySelector('.topdown-view');
-    
-    console.log('Elements found:', { 
-        sceneContainer: !!sceneContainer, 
-        topdownView: !!topdownView 
-    });
-    
-    if (sceneContainer && topdownView) {
-        // In engineer mode, make 2D view bigger and 3D view smaller
-        if (mode === 'engineer') {
-            console.log('Adding minimized/expanded classes');
-            sceneContainer.classList.add('minimized');
-            topdownView.classList.add('expanded');
-            if (toggleMin3DViewBtn) toggleMin3DViewBtn.style.display = 'block';
-            if (window.visualizer3D && window.visualizer3D.setEngineerViewOptimizedForMinimized) {
-                window.visualizer3D.setEngineerViewOptimizedForMinimized(true);
-            }
-            
-            // Quick toggle effect only when switching from audience to engineer
-            // if (previousMode === 'audience') {
-            //     // First ensure it's visible for the quick flash
-            //     sceneContainer.classList.remove('minimized-view-hidden');
-                
-            //     // After a brief moment, hide it again
-            //     setTimeout(() => {
-            //         sceneContainer.classList.add('minimized-view-hidden');
-            //         if(toggleMin3DViewBtn) toggleMin3DViewBtn.textContent = 'Show 3D View';
-            //     }, 300); // 300ms delay for the quick flash effect
-            // } else {
-                // If not switching from audience, just hide immediately
-                sceneContainer.classList.add('minimized-view-hidden');
-                if(toggleMin3DViewBtn) toggleMin3DViewBtn.textContent = 'Show 3D View';
-            // }
-
-        } else {
-            console.log('Removing minimized/expanded classes');
-            sceneContainer.classList.remove('minimized');
-            topdownView.classList.remove('expanded');
-            if (toggleMin3DViewBtn) toggleMin3DViewBtn.style.display = 'none';
-            // Ensure 3D view is visible when leaving engineer mode & reset its specific camera adjustments
-            sceneContainer.classList.remove('minimized-view-hidden');
-            if (window.visualizer3D && window.visualizer3D.setEngineerViewOptimizedForMinimized) {
-                window.visualizer3D.setEngineerViewOptimizedForMinimized(false);
-            }
-        }
-        
-
-            const performerDropdown = document.getElementById('performer-dropdown-container');
-        if (performerDropdown) {
-            performerDropdown.style.display = mode === 'audience' ? 'block' : 'none';
-        }
-        
-        // // Disable manual controls in performer mode
-        // if (mode === 'performer') {
-        //     const mixModeToggle = document.querySelector('#mixModeToggle');
-        //     if (mixModeToggle) {
-        //         mixModeToggle.checked = false;
-        //         isMixingMode = false;
-        //     }
-        // }
-        
-        // Log the current classes for verification
-        console.log('Current classes:', {
-            sceneContainer: sceneContainer.className,
-            topdownView: topdownView.className
-        });
-        
-        // Force a resize event after a short delay to ensure proper rendering after class changes
-        setTimeout(() => {
-            console.log('Dispatching resize event'); // Debug log
-            window.dispatchEvent(new Event('resize'));
-        }, 50);
+    sceneContainer?.classList.toggle('minimized', mode === 'engineer');
+    sceneContainer?.classList.toggle('minimized-view-hidden', mode === 'engineer');
+    topdownView?.classList.toggle('expanded', mode === 'engineer');
+    if (toggleMin3DViewBtn) {
+        toggleMin3DViewBtn.disabled = true;
+        toggleMin3DViewBtn.textContent = '3D view unavailable';
+        toggleMin3DViewBtn.title = 'Use Audience to explore the 3D view';
     }
-    
-    // Reset view in 3D visualization
+    updateListenerPosition();
     if (window.visualizer3D) {
+        window.visualizer3D.clearMovementKeys();
         window.visualizer3D.resetOrientation();
-        
-        // For audience mode, move back
-        if (mode === 'audience' && window.visualizer3D.moveCamera) {
-            window.visualizer3D.moveCamera(0, 1.7, 0.5);
-        } 
-        
-        // For engineer mode, position higher looking down
-        else if (mode === 'engineer' && window.visualizer3D.moveCamera) {
-            window.visualizer3D.moveCamera(0, 2.5, 0); // Lower height to keep things visible
-        }
+        window.visualizer3D.setEngineerViewOptimizedForMinimized(mode === 'engineer');
+        window.visualizer3D.moveCamera(0, mode === 'engineer' ? 2.5 : 1.7, mode === 'engineer' ? 0 : 0.5);
     }
-    
-    // Toggle dry/wet control visibility
+    const location = document.getElementById('performer-speaker-select');
+    if (location) location.value = '8';
+    resetEngineerSpeakerKeys();
+    resetT12SpeakerStates();
     toggleDryWetControlVisibility();
-    if (currentScene === 'stropheV') updateStropheVCrossfade();
-    
-    // Update score panel visibility based on mode
     updateScorePanelVisibility();
-    
-    // Reset engineer speaker keys when changing mode
-    if (mode !== 'engineer') {
-        resetEngineerSpeakerKeys();
-    } else {
-        // When entering engineer mode, initialize all speakers to 50% volume
-        resetEngineerSpeakerKeys();
-    }
-    
-    // Update the pattern for current time position
-    if (!currentAudioElement.paused) {
-        const currentTime = currentAudioElement.currentTime;
-        
-        const timestamps = timestampPatterns[currentScene].timestamps;
-        let newIndex = timestamps.findIndex((timestamp, index) => {
-            const nextTimestamp = timestamps[index + 1] || Infinity;
-            return currentTime >= timestamp && currentTime < nextTimestamp;
-        });
-        
-        if (newIndex === -1) newIndex = 0;
-        applyPattern(newIndex);
-    }
+    updateEngineerControls();
+    applyCurrentMix();
+    window.dispatchEvent(new Event('resize'));
 }
 
 // Function to change the scene
@@ -1285,6 +1271,9 @@ function setScene(scene) {
 
     // Update scene 
     currentScene = scene;
+    window.currentScene = scene;
+    engineerSpeakerKeys.fill(false);
+    updateEngineerControls();
     
     // Update score panel for the new scene if in engineer mode
     if (currentMode === 'engineer') {
@@ -1363,26 +1352,23 @@ function setMixingMode(enabled) {
     }
 }
 
-// Show trivia popup with content specific to the current scene
-function showSceneTrivia(scene) {
-    const triviaContent = document.querySelector('.trivia-content');
-    if (!triviaContent || !window.getSceneTrivia) return;
-    
-    const sceneTrivia = window.getSceneTrivia(scene);
-    if (!sceneTrivia) return;
-    
-    triviaContent.innerHTML = sceneTrivia.content;
-    
-    // Auto-show trivia for 3 seconds when scene changes
-    const triviaContainer = document.querySelector('.trivia-container');
-    if (triviaContainer) {
-        triviaContainer.style.display = 'flex';
-        setTimeout(() => {
-            // Check if it's still displayed before hiding, to avoid issues if user closed it manually
-            if (triviaContainer.style.display === 'flex') {
-                triviaContainer.style.display = 'none';
-            }
-        }, 3000);
+function setInformationOpen(open) {
+    const panel = document.querySelector('.trivia-container');
+    const button = document.getElementById('triviaButton');
+    if (!panel || !button) return;
+    document.body.classList.toggle('info-open', open);
+    panel.hidden = !open;
+    button.setAttribute('aria-expanded', String(open));
+    document.getElementById('title-container')?.setAttribute('aria-hidden', String(open));
+    if (open) {
+        resetEngineerSpeakerKeys();
+        window.visualizer3D?.clearMovementKeys();
+        const content = window.getSceneTrivia?.(currentScene);
+        if (content) document.querySelector('.trivia-content').innerHTML = content.content;
+        document.querySelectorAll('.trivia-nav').forEach(button => button.classList.remove('active'));
+        panel.querySelector('.close-trivia').focus();
+    } else {
+        button.focus();
     }
 }
 
@@ -1476,23 +1462,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // Set up trivia button
+    // Nonmodal information panel: the same button remains available to close it.
     const triviaButton = document.getElementById('triviaButton');
-    const triviaContainer = document.querySelector('.trivia-container');
     const closeTrivia = document.querySelector('.close-trivia');
-    
-    if (triviaButton && triviaContainer) {
-        triviaButton.addEventListener('click', () => {
-            triviaContainer.style.display = 'flex';
+    triviaButton?.addEventListener('click', () => setInformationOpen(!document.body.classList.contains('info-open')));
+    closeTrivia?.addEventListener('click', () => setInformationOpen(false));
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && document.body.classList.contains('info-open')) {
+            event.preventDefault();
+            setInformationOpen(false);
+        }
+    });
+    document.querySelectorAll('[data-engineer-control]').forEach(button => {
+        button.addEventListener('click', () => setEngineerControl(button.dataset.engineerControl));
+    });
+    document.querySelectorAll('.speaker-trigger').forEach((button, index) => {
+        button.addEventListener('click', () => {
+            if (!isManualMix()) return;
+            engineerSpeakerKeys[index] = !engineerSpeakerKeys[index];
+            applyEngineerSpeakers();
         });
-    }
-    
-    if (closeTrivia && triviaContainer) {
-        closeTrivia.addEventListener('click', () => {
-            triviaContainer.style.display = 'none';
-        });
-    }
-    
+    });
+    window.addEventListener('blur', resetEngineerSpeakerKeys);
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) resetEngineerSpeakerKeys();
+    });
+
     // Set up trivia navigation
     document.querySelectorAll('.trivia-nav').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -1526,32 +1521,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Set up score display controls
-    if (scoreDisplayBtn) {
-        scoreDisplayBtn.addEventListener('click', () => {
-            if (scorePanel) {
-                const isVisible = scorePanel.style.display === 'block' && scorePanel.classList.contains('visible');
-                
-                if (isVisible) {
-                    // Hide the score panel
-                    scorePanel.classList.remove('visible');
-                    setTimeout(() => {
-                        scorePanel.style.display = 'none';
-                    }, 300);
-                    scoreDisplayBtn.classList.remove('active');
-                } else {
-                    // Show the score panel
-                    scorePanel.style.display = 'block';
-                    setTimeout(() => {
-                        scorePanel.classList.add('visible');
-                    }, 10);
-                    scoreDisplayBtn.classList.add('active');
-                    updateScoreForCurrentScene();
-                }
-            }
-        });
-    }
-    
+    // Open the score on request, leaving the spatial map clear initially.
+    scoreDisplayBtn?.addEventListener('click', () => {
+        const open = scorePanel.style.display !== 'block';
+        setScorePanelOpen(open);
+        if (open) updateScoreForCurrentScene();
+    });
+
     if (closeVolumePanel) {
         closeVolumePanel.addEventListener('click', () => {
             if (volumeDisplayPanel) {
@@ -1563,52 +1539,20 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Score panel close button
-    const closeScorePanel = document.getElementById('closeScorePanel');
-    if (closeScorePanel) {
-        closeScorePanel.addEventListener('click', () => {
-            const scorePanel = document.getElementById('score-panel');
-            const scoreDisplayBtn = document.getElementById('scoreDisplayBtn');
-            
-            if (scorePanel) {
-                scorePanel.classList.remove('visible');
-                // Hide the panel after animation completes
-                setTimeout(() => {
-                    scorePanel.style.display = 'none';
-                }, 300);
-            }
-            
-            if (scoreDisplayBtn) {
-                scoreDisplayBtn.classList.remove('active');
-            }
-        });
-    }
+    document.getElementById('closeScorePanel')?.addEventListener('click', () => setScorePanelOpen(false));
 
     // Create and setup toggle button for minimized 3D view
     toggleMin3DViewBtn = document.createElement('button');
     toggleMin3DViewBtn.id = 'toggleMin3DViewBtn';
     toggleMin3DViewBtn.textContent = 'Hide 3D View';
-    toggleMin3DViewBtn.style.display = 'none'; // Initially hidden
+    toggleMin3DViewBtn.disabled = true;
     toggleMin3DViewBtn.classList.add('minimized-view-toggle-btn');
 
-    const immersiveContainer = document.getElementById('immersive-container');
+    const immersiveContainer = document.getElementById('control-panel');
     if (immersiveContainer) {
         immersiveContainer.appendChild(toggleMin3DViewBtn);
     }
 
-    toggleMin3DViewBtn.addEventListener('click', () => {
-        const sceneContainer = document.getElementById('scene-container');
-        if (sceneContainer.classList.contains('minimized-view-hidden')) {
-            sceneContainer.classList.remove('minimized-view-hidden');
-            toggleMin3DViewBtn.textContent = 'Hide 3D View';
-            // Crucial: Dispatch resize for Three.js to re-render correctly in the now visible container
-            setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
-        } else {
-            sceneContainer.classList.add('minimized-view-hidden');
-            toggleMin3DViewBtn.textContent = 'Show 3D View';
-        }
-    });
-    
     // Initialize mode and scene
     setMode('audience');
     setScene('default');
@@ -1668,17 +1612,15 @@ const engineerKeyToSpeakerIndex = {
 
 // Engineer mode: handle keydown/keyup for speakers 1-6 and U/I/K/M/N/H
 function handleEngineerSpeakerKeys(e, isDown) {
-    if (currentMode !== 'engineer') return;
+    if (!isManualMix() || currentScene === 'stropheV') return;
+    if (isDown && ignoreAudioShortcut(e)) return;
     const key = e.key.toLowerCase();
     if (engineerKeyToSpeakerIndex.hasOwnProperty(key)) {
         const idx = engineerKeyToSpeakerIndex[key];
         engineerSpeakerKeys[idx] = isDown;
         // Build pattern: 1.0 for pressed (100%), 0.5 for not pressed (50% minimum)
 
-        const baseVolume = currentScene === 'transition1-2' ? 0.5 : 0.0;
-        
-        const pattern = engineerSpeakerKeys.map(active => active ? 1.0 : baseVolume);
-        playSpeaker(pattern);
+        applyEngineerSpeakers();
         // Prevent default to avoid unwanted browser shortcuts
         e.preventDefault();
     }
@@ -1692,11 +1634,7 @@ window.addEventListener('keyup', (e) => handleEngineerSpeakerKeys(e, false));
 function resetEngineerSpeakerKeys() {
     engineerSpeakerKeys = [false, false, false, false, false, false];
     // In engineer mode, set all speakers to 50% minimum volume
-    if (currentMode === 'engineer') {
-        const baseVolume = currentScene === 'transition1-2' ? 0.5 : 0.0;
-        const pattern = [baseVolume, baseVolume, baseVolume, baseVolume, baseVolume, baseVolume];
-        playSpeaker(pattern);
-    }
+    if (isManualMix()) applyEngineerSpeakers();
 }
 
 // Function to update the automatic crossfade based on time
@@ -1735,7 +1673,7 @@ function updateStropheVCrossfade() {
     
     // In engineer mode, use manual control instead of automatic
     let finalWetAmount = automaticWetAmount;
-    if (currentMode === 'engineer') {
+    if (isManualMix()) {
         finalWetAmount = manualWetAmount;
     }
     
@@ -1748,6 +1686,12 @@ function updateStropheVCrossfade() {
     
     // Hidden speaker's volume varies based on wet amount
     wetGain.gain.setTargetAtTime(finalWetAmount, audioCtx.currentTime, 0.05);
+    {
+        const slider = document.getElementById('dryWetSlider');
+        const percentage = document.getElementById('dryWetValue');
+        if (slider) slider.value = Math.round(finalWetAmount * 100);
+        if (percentage) percentage.textContent = Math.round(finalWetAmount * 100) + '%';
+    }
     
     // Update visualization if needed
     if (window.updateWetDryVisualization) {
@@ -1758,25 +1702,8 @@ function updateStropheVCrossfade() {
 
 // Function to smoothly ramp between dry/wet values
 function rampDryWetAmount(startValue, targetValue, duration) {
-    const startTime = Date.now();
-    const difference = targetValue - startValue;
-    
-    function updateRamp() {
-        const elapsed = (Date.now() - startTime) / 1000; // Convert to seconds
-        const progress = Math.min(elapsed / duration, 1); // Clamp to 1
-        
-        // Use smooth easing curve
-        const easedProgress = progress * progress * (3 - 2 * progress); // Smooth step
-        const currentValue = startValue + (difference * easedProgress);
-        
-        setDryWetAmount(currentValue);
-        
-        if (progress < 1) {
-            requestAnimationFrame(updateRamp);
-        }
-    }
-    
-    requestAnimationFrame(updateRamp);
+    // GainNode smoothing handles the audible ramp without competing UI loops.
+    setDryWetAmount(targetValue);
 }
 
 // Set up dry/wet control for Strophe V
@@ -1796,7 +1723,7 @@ let keyboardDryWetTimeout = null;
 // Handle keydown events for smooth ramping
 window.addEventListener('keydown', (e) => {
     // Only handle keyboard controls in engineer mode for Strophe V
-    if (currentMode !== 'engineer' || currentScene !== 'stropheV') return;
+    if (!isManualMix() || currentScene !== 'stropheV' || ignoreAudioShortcut(e) || e.repeat) return;
     
     // Handle number keys 0-9 for dry/wet control
     const key = e.key;
@@ -1830,7 +1757,7 @@ function setDryWetAmount(amount) {
         valueDisplay.textContent = Math.round(manualWetAmount * 100) + '%';
     }
     
-    if (currentMode === 'engineer' && currentScene === 'stropheV') {
+    if (isManualMix() && currentScene === 'stropheV') {
         updateStropheVCrossfade();
     }
 }
@@ -1885,37 +1812,19 @@ function updateArabicVisualizationImage() {
 
 // Function to show/hide score panel based on mode
 function updateScorePanelVisibility() {
-    const scorePanel = document.getElementById('score-panel');
-    const scoreDisplayBtn = document.getElementById('scoreDisplayBtn');
-    
-    if (!scorePanel) return;
-    
-    if (currentMode === 'engineer') {
-        // Show the toggle button
-        if (scoreDisplayBtn) {
-            scoreDisplayBtn.style.display = 'block';
-            scoreDisplayBtn.classList.add('active');
-        }
-        
-        scorePanel.style.display = 'block';
-        // Add a small delay to ensure the element is visible before animating
-        setTimeout(() => {
-            scorePanel.classList.add('visible');
-        }, 10);
-        updateScoreForCurrentScene();
-    } else {
-        // Hide the toggle button
-        if (scoreDisplayBtn) {
-            scoreDisplayBtn.style.display = 'none';
-            scoreDisplayBtn.classList.remove('active');
-        }
-        
-        scorePanel.classList.remove('visible');
-        // Hide the panel after animation completes
-        setTimeout(() => {
-            scorePanel.style.display = 'none';
-        }, 300);
-    }
+    if (!scorePanel || !scoreDisplayBtn) return;
+    scoreDisplayBtn.style.display = currentMode === 'engineer' ? 'block' : 'none';
+    setScorePanelOpen(false);
+    if (currentMode === 'engineer') updateScoreForCurrentScene();
+}
+
+function setScorePanelOpen(open) {
+    scorePanel.style.display = open ? 'block' : 'none';
+    scorePanel.classList.toggle('visible', open);
+    scoreDisplayBtn.classList.toggle('active', open);
+    scoreDisplayBtn.setAttribute('aria-expanded', String(open));
+    document.body.classList.toggle('score-open', open);
+    window.dispatchEvent(new Event('resize'));
 }
 
 // Function to update the score image based on current scene

@@ -165,7 +165,7 @@ class AudioVisualizer3D {
         this.scene.add(centerCircle);
 
         // Add red circle at z=-4.111
-        const redCircleGeometry = new THREE.RingGeometry(0.2, 0.25, 32);
+        const redCircleGeometry = new THREE.RingGeometry(0.5, 0.55, 32);
         const redCircleMaterial = new THREE.MeshBasicMaterial({
             color: 0xff0000,
             side: THREE.DoubleSide,
@@ -176,9 +176,28 @@ class AudioVisualizer3D {
         redCircle.rotation.x = -Math.PI / 2;
         redCircle.position.set(0, -0.06, -4.111); // Position at z=-4.111, slightly above the grid
         this.scene.add(redCircle);
+        this.createRingLabel(['Audio', 'Engineer'], 0, -0.065);
+        this.createRingLabel(['Performer'], -4.111, -0.055);
 
         // Add text panels to the environment walls
         this.addTextPanels();
+    }
+
+    createRingLabel(lines, z, y) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 68px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        lines.forEach((line, index) => ctx.fillText(line, 256, 128 + (index - (lines.length - 1) / 2) * 80, 480));
+        const label = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.45),
+            new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true, side: THREE.DoubleSide, depthWrite: false }));
+        label.rotation.x = -Math.PI / 2;
+        label.position.set(0, y, z);
+        this.scene.add(label);
     }
 
     // Helper function to create text panels
@@ -634,6 +653,8 @@ class AudioVisualizer3D {
         // Keyboard event listeners
         window.addEventListener('keydown', this.onKeyDown.bind(this));
         window.addEventListener('keyup', this.onKeyUp.bind(this));
+        window.addEventListener('blur', () => this.clearMovementKeys());
+        document.addEventListener('visibilitychange', () => { if (document.hidden) this.clearMovementKeys(); });
         
         // Prevent default behavior for movement keys when focused on the scene
         this.container.addEventListener('keydown', (event) => {
@@ -645,10 +666,17 @@ class AudioVisualizer3D {
         
         // Make container focusable for keyboard events
         this.container.setAttribute('tabindex', '0');
-        this.container.style.outline = 'none'; // Remove focus outline
+        this.container.setAttribute('aria-label', 'Spatial listening view');
+    }
+
+    clearMovementKeys() {
+        Object.keys(this.keys).forEach(key => { this.keys[key] = false; });
+        this.isRotating = false;
+        this.rotationSpeed = 0;
     }
 
     onKeyDown(event) {
+        if (window.currentMode !== 'audience' || window.ignoreAudioShortcut?.(event)) return;
         const key = event.key.toLowerCase();
         if (this.keys.hasOwnProperty(key)) {
             this.keys[key] = true;
@@ -665,6 +693,7 @@ class AudioVisualizer3D {
     }
 
     updateMovement() {
+        if (window.currentMode !== 'audience') return;
         let moved = false;
         let rotated = false;
         
@@ -987,8 +1016,10 @@ class AudioVisualizer3D {
         if (!this.topdownCtx || !this.topdownCanvas) return;
 
         const ctx = this.topdownCtx;
-        const width = this.topdownCanvas.width;
-        const height = this.topdownCanvas.height;
+        const pixelRatio = window.devicePixelRatio || 1;
+        ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+        const width = this.topdownCanvas.width / pixelRatio;
+        const height = this.topdownCanvas.height / pixelRatio;
         const radius = Math.min(width, height) / 2.5; // Radius for speakers circle
         const centerX = width / 2;
         const centerY = height / 2;
@@ -1035,16 +1066,23 @@ class AudioVisualizer3D {
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(centerX, centerY, 0.5 * scale, 0, Math.PI * 2);
+        ctx.arc(centerX, centerY, Math.max(24, 0.5 * scale), 0, Math.PI * 2);
         ctx.stroke();
 
         // Draw red circle at z=-4.111
         ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(centerX, centerY -4.111 * scale, 0.2 * scale, 0, Math.PI * 2);
+        ctx.arc(centerX, centerY -4.111 * scale, Math.max(24, 0.55 * scale), 0, Math.PI * 2);
         ctx.stroke();
         
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 9px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Audio', centerX, centerY - 2);
+        ctx.fillText('Engineer', centerX, centerY + 9);
+        ctx.fillText('Performer', centerX, centerY - 4.111 * scale + 3);
+
         // Define speaker positions with corrected gain node mappings
         const speakerPositions = [
             { angle: 210, label: 5, gainNode: 4 },
@@ -1056,7 +1094,9 @@ class AudioVisualizer3D {
         ];
         
         // Draw anticipation lanes first (so they're behind the speakers)
-        this.drawAnticipationLanes(ctx, centerX, centerY, radius, speakerPositions);
+        if (['default', 'transition1-2'].includes(window.currentScene)) {
+            this.drawAnticipationLanes(ctx, centerX, centerY, radius, speakerPositions);
+        }
         
         // Draw each speaker
         speakerPositions.forEach(speaker => {
@@ -1103,6 +1143,9 @@ class AudioVisualizer3D {
             ctx.fillText(speaker.label, x, y);
         });
         
+        // The engineer stays at the labeled center; reserve the moving avatar for Audience.
+        if (window.currentMode === 'engineer') return;
+
         // Calculate listener position in 2D canvas coordinates
         const listenerCanvasX = centerX + this.listenerPosition.x * scale;
         // Fix: Use + instead of - for correct forward/backward mapping
